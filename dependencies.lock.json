@@ -17,6 +17,11 @@
       "url": "https://github.com/Dimensionscape/Emitter.git",
       "revision": "06b396f584271e24a7dc18dcfadfd020c567cc6a"
     },
+    "hashlink": {
+      "url": "https://github.com/HaxeFoundation/hashlink.git",
+      "revision": "c3f2a1563cf7aa9f4076b0808a7eaf40e18e8f14",
+      "version": "1.16.0"
+    },
     "wrk": {
       "url": "https://github.com/wg/wrk.git",
       "revision": "a211dd5a7050b1f9e8a9870b95513060e72ac4a0"

@@ -85,9 +85,10 @@ class HarnessTests(unittest.TestCase):
     def test_matrix_is_explicit_and_rejects_unknown_or_duplicate_cases(self):
         config, lock = load_config()
         self.assertEqual(9, len(select_cases(config)))
-        self.assertEqual(["jvm-socket", "neko-crossbyte", "cpp-crossbyte", "cpp-crossbyte-libuv"],
-                         [c["id"] for c in select_cases(config, "jvm-socket,neko-crossbyte,cpp-crossbyte,cpp-crossbyte-libuv")])
-        for text in ("", "jvm-socket,jvm-socket", "jvm-unknown", "../../tmp", "all;echo bad"):
+        self.assertEqual({"jvm", "hl", "js", "cpp"}, {case["target"] for case in config["cases"]})
+        self.assertEqual(["jvm-socket", "hl-crossbyte", "cpp-crossbyte", "cpp-crossbyte-libuv"],
+                         [c["id"] for c in select_cases(config, "jvm-socket,hl-crossbyte,cpp-crossbyte,cpp-crossbyte-libuv")])
+        for text in ("", "jvm-socket,jvm-socket", "jvm-unknown", "neko-socket", "neko-crossbyte", "../../tmp", "all;echo bad"):
             with self.assertRaises(ValueError):
                 select_cases(config, text)
         self.assertEqual(40, len(lock["repositories"]["wrk"]["revision"]))
@@ -127,7 +128,7 @@ class HarnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "dependencies.lock.json").write_text(json.dumps(lock))
-            for key, bad in (("target", "neko"), ("driver", "socket"), ("poll_backend", "unknown")):
+            for key, bad in (("target", "hl"), ("driver", "socket"), ("poll_backend", "unknown")):
                 changed = json.loads(json.dumps(config))
                 changed["cases"][-1][key] = bad
                 (root / "benchmark.json").write_text(json.dumps(changed))

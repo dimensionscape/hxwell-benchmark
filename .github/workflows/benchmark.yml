@@ -150,10 +150,26 @@ jobs:
       - name: Install runtimes and wrk build dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y neko build-essential libssl-dev unzip
+          sudo apt-get install -y build-essential libssl-dev unzip
           python -m bench fetch --names wrk
           make -C dependencies/wrk -j2 WITH_OPENSSL=/usr VER=4.2.0
           python -m pip install -r requirements-charts.txt
+      - name: Build and verify the pinned HashLink JIT runtime
+        if: contains(needs.plan.outputs.matrix, '"target":"hl"')
+        run: |
+          sudo apt-get install -y libpng-dev libturbojpeg0-dev libvorbis-dev zlib1g-dev libsqlite3-dev
+          python -m bench fetch --names hashlink
+          python -m bench hashlink --out out/hashlink
+          echo "$GITHUB_WORKSPACE/out/hashlink" >> "$GITHUB_PATH"
+      - name: Preserve HashLink runtime provenance and build diagnostics
+        if: always() && contains(needs.plan.outputs.matrix, '"target":"hl"')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: hashlink-runtime-build
+          retention-days: 14
+          path: |
+            out/hashlink/build.log
+            out/hashlink/manifest.json
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         # Missing bundles are reported as invalid cases by the runner below.
         continue-on-error: true

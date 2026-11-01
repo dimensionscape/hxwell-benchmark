@@ -21,7 +21,7 @@ METRICS = (
     ("peak_group_rss_mib", "RSS", "peak process-group RSS · MiB"),
 )
 COLORS = ("#2563eb", "#7c3aed", "#0891b2", "#d97706", "#be185d", "#059669", "#475569", "#dc2626", "#0f766e")
-TARGET_LABELS = {"jvm": "JVM", "neko": "Neko", "js": "JavaScript / Node", "cpp": "C++ / libhxcpp"}
+TARGET_LABELS = {"jvm": "JVM", "hl": "HashLink / HL-JIT", "js": "JavaScript / Node", "cpp": "C++ / libhxcpp"}
 
 
 def target_filename(target):

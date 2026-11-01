@@ -7,7 +7,8 @@ class Settings {
     public static var runId:String = Sys.getEnv("BENCH_RUN_ID") ?? "manual";
     public static var caseId:String = haxe.macro.Compiler.getDefine("bench_case");
     public static var driver:String = haxe.macro.Compiler.getDefine("bench_driver");
-    public static var target:String = #if jvm "jvm" #elseif neko "neko" #elseif js "js" #elseif cpp "cpp" #else "unsupported" #end;
+    public static var target:String = #if jvm "jvm" #elseif hl "hl" #elseif js "js" #elseif cpp "cpp" #else "unsupported" #end;
+    public static var hashlinkMode:String = #if hl "jit" #else "" #end;
     public static var cppRuntime:String = #if (cpp && libhxcpp) "libhxcpp" #elseif cpp "hxcpp" #else "" #end;
     public static var cppRuntimeVersion:String = #if (cpp && libhxcpp) haxe.macro.Compiler.getDefine("libhxcpp") #else "" #end;
 

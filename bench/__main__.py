@@ -8,6 +8,7 @@ from .config import load_config, select_cases
 from .dependencies import fetch
 from .build import build, unpack
 from .run import run
+from .hashlink import build_runtime
 from .vendor import snapshot
 
 
@@ -20,12 +21,15 @@ def main():
     matrix.add_argument("--github-output", type=Path)
     download = sub.add_parser("fetch")
     download.add_argument("--deps", type=Path, default=Path("dependencies"))
-    download.add_argument("--names", default="hxwell,hxwell-crossbyte,crossbyte,emitter,libhxcpp,crossbyte-libuv,libuv,wrk,maven")
+    download.add_argument("--names", default="hxwell,hxwell-crossbyte,crossbyte,emitter,libhxcpp,crossbyte-libuv,libuv,hashlink,wrk,maven")
     compile = sub.add_parser("build")
     compile.add_argument("--case", required=True)
     compile.add_argument("--deps", type=Path, default=Path("dependencies"))
     compile.add_argument("--out", type=Path, default=Path("out/build"))
     compile.add_argument("--haxe", default="haxe")
+    hashlink = sub.add_parser("hashlink", help="Build the pinned Linux x86-64 HashLink JIT runtime")
+    hashlink.add_argument("--deps", type=Path, default=Path("dependencies"))
+    hashlink.add_argument("--out", type=Path, default=Path("out/hashlink"))
     vendor = sub.add_parser("vendor-crossbyte")
     vendor.add_argument("--source", type=Path, required=True)
     extract = sub.add_parser("unpack")
@@ -57,6 +61,8 @@ def main():
         if len(cases) != 1:
             parser.error("build expects one case")
         build(config, lock, cases[0], args.deps, args.out, args.haxe)
+    elif args.command == "hashlink":
+        build_runtime(lock, args.deps, args.out)
     elif args.command == "unpack":
         unpack(args.archives, args.out)
     elif args.command == "vendor-crossbyte":

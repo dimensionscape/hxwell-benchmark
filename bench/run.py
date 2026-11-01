@@ -18,6 +18,7 @@ import uuid
 from .config import ROOT
 from .dependencies import sha256
 from .metrics import ProcessMeter
+from .hashlink import verify_runtime
 from .report import write_reports
 
 MARKER = "HXWELL_BENCH_JSON "
@@ -159,6 +160,8 @@ def validate_health(health, case, workers, token, metadata):
     expected_virtual = case["target"] == "jvm" and case["driver"] == "crossbyte"
     if health.get("virtual_thread") is not expected_virtual:
         raise RuntimeError("Unexpected request thread dispatch mode")
+    if case["target"] == "hl" and health.get("hashlink_mode") != "jit":
+        raise RuntimeError("HashLink benchmark did not use the expected JIT mode")
     if case["target"] == "cpp":
         version = metadata.get("libraries", {}).get("libhxcpp")
         if not version or health.get("cpp_runtime") != "libhxcpp" or health.get("cpp_runtime_version") != version:
@@ -282,6 +285,7 @@ def run(config, lock, cases, bundles, output, profile_name, wrk, seed=1337, pin=
     wrk_version = version([str(wrk), "--version"])
     if not wrk_version or "4.2.0" not in wrk_version:
         raise ValueError(f"Need pinned wrk 4.2.0; found {wrk_version}")
+    hashlink = verify_runtime(lock) if any(case["target"] == "hl" for case in cases) else None
     cpu = affinity(pin)
     workers = workers or (len(cpu["server"]) if cpu["enabled"] else 2)
     if workers < 1 or workers > 256:
@@ -295,7 +299,7 @@ def run(config, lock, cases, bundles, output, profile_name, wrk, seed=1337, pin=
               "profile": profile, "seed": seed, "hardware": hardware(), "affinity": cpu,
               "settings": {"server_workers": workers, "client_threads": threads, "protocol": "HTTP/1.1", "middleware": "none", "compression": "identity",
                            "request_timeout_seconds": timeout_seconds, "file_descriptor_limits": file_limits},
-              "versions": {"wrk": wrk_version, "java": version(["java", "-version"]), "neko": version(["neko", "-version"]),
+              "versions": {"wrk": wrk_version, "java": version(["java", "-version"]), "hashlink": hashlink,
                            "node": version(["node", "--version"]), "repositories": lock["repositories"]},
               "scripts": {"load/report.lua": sha256(ROOT / "load/report.lua"), "benchmark.json": sha256(ROOT / "benchmark.json")},
               "selected_cases": cases, "expected_trials": len(cases) * len(config["workloads"]) * len(profile["connections"]) * profile["repetitions"],

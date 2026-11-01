@@ -58,9 +58,9 @@ def build(config, lock, case, deps, output, haxe="haxe"):
     if target == "jvm":
         args += ["-lib", "hxjava", "--jvm", "server.jar"]
         launch = ["java", "-Xms256m", "-Xmx256m", "-cp", "server.jar" + (os.pathsep + "lib/*" if jars else ""), "hx.well.HxWell"]
-    elif target == "neko":
-        args += ["--neko", "server.n"]
-        launch = ["neko", "server.n"]
+    elif target == "hl":
+        args += ["-D", "hl-ver=" + lock["repositories"]["hashlink"]["version"], "--hl", "server.hl"]
+        launch = ["hl", "server.hl"]
     elif target == "js":
         args += ["-lib", "hxnodejs", "-D", "js-es=6", "--js", "server.js"]
         launch = ["node", "--max-old-space-size=256", "server.js"]
@@ -89,7 +89,7 @@ def build(config, lock, case, deps, output, haxe="haxe"):
     if target == "cpp":
         shutil.copy2(work / "native/HxWell", destination / "server")
     else:
-        suffix = {"jvm": "jar", "neko": "n", "js": "js"}[target]
+        suffix = {"jvm": "jar", "hl": "hl", "js": "js"}[target]
         shutil.copy2(work / f"server.{suffix}", destination / f"server.{suffix}")
     if jars:
         (destination / "lib").mkdir()
