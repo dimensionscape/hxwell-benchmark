@@ -3,6 +3,7 @@ import json
 import math
 import os
 from pathlib import Path
+import resource
 import subprocess
 import sys
 import tarfile
@@ -17,7 +18,7 @@ from bench.build import unpack
 from bench.config import load_config, select_cases
 from bench.metrics import parse_stat
 from bench.report import summarize, write_reports
-from bench.run import MARKER, parse_wrk, preflight, stop_group, validate_health
+from bench.run import MARKER, ensure_file_limit, parse_wrk, preflight, run, stop_group, validate_health
 from bench.vendor import verify_snapshot
 from bench.dependencies import sha256
 
@@ -90,6 +91,36 @@ class HarnessTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 select_cases(config, text)
         self.assertEqual(40, len(lock["repositories"]["wrk"]["revision"]))
+
+    def test_high_concurrency_raises_only_the_soft_descriptor_limit(self):
+        with patch("bench.run.resource.getrlimit", return_value=(256, 8192)), patch("bench.run.resource.setrlimit") as change:
+            limits = ensure_file_limit(1000)
+        kind, (soft, hard) = change.call_args.args
+        self.assertEqual(resource.RLIMIT_NOFILE, kind)
+        self.assertGreaterEqual(soft, 2000)
+        self.assertEqual(8192, hard)
+        self.assertEqual(soft, limits["soft_after"])
+        self.assertEqual(256, limits["soft_before"])
+
+    def test_descriptor_limit_never_lowers_available_capacity(self):
+        for before in (8192, resource.RLIM_INFINITY):
+            with patch("bench.run.resource.getrlimit", return_value=(before, resource.RLIM_INFINITY)), patch("bench.run.resource.setrlimit") as change:
+                limits = ensure_file_limit(1000)
+                change.assert_not_called()
+            self.assertEqual("unlimited" if before == resource.RLIM_INFINITY else before, limits["soft_after"])
+
+    def test_insufficient_hard_descriptor_limit_fails_before_loading(self):
+        with patch("bench.run.resource.getrlimit", return_value=(256, 1024)), patch("bench.run.resource.setrlimit") as change:
+            with self.assertRaisesRegex(ValueError, "hard limit"):
+                ensure_file_limit(1000)
+            change.assert_not_called()
+
+    def test_request_timeout_is_bounded_and_finite(self):
+        config, lock = load_config()
+        for timeout in (0, -1, float("nan"), float("inf"), True, 61):
+            config["profiles"]["stress"]["request_timeout_seconds"] = timeout
+            with tempfile.TemporaryDirectory() as folder, self.assertRaisesRegex(ValueError, "Request timeout"):
+                run(config, lock, [], folder, Path(folder) / "out", "stress", "unused-wrk")
 
     def test_libuv_configuration_requires_native_crossbyte(self):
         config, lock = load_config()

@@ -1,4 +1,5 @@
 import base64
+import argparse
 import copy
 import json
 from pathlib import Path
@@ -6,7 +7,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from bench.charts import ASSET_PATH, START, END, asset_names, chart_views, dashboard, render, replace_readme, run_metadata, target_filename
+from bench.charts import ASSET_PATH, START, END, arguments, asset_names, chart_views, dashboard, render, replace_readme, run_metadata, target_filename
 from bench.publish import ApiError, newer_than, publish, trusted_environment
 
 
@@ -14,7 +15,8 @@ def config():
     return {"cases": [{"id": "jvm-socket", "target": "jvm"}, {"id": "neko-socket", "target": "neko"}], "workloads": [{"id": "plaintext"}, {"id": "json"}],
             "profiles": {"ci": {"warmup_seconds": 1, "duration_seconds": 2, "repetitions": 2, "connections": [16], "performance_run": True},
                          "smoke": {"warmup_seconds": 1, "duration_seconds": 1, "repetitions": 1, "connections": [4], "performance_run": False},
-                         "full": {"warmup_seconds": 1, "duration_seconds": 2, "repetitions": 2, "connections": [16, 64], "performance_run": True}}}
+                         "full": {"warmup_seconds": 1, "duration_seconds": 2, "repetitions": 2, "connections": [16, 64], "performance_run": True},
+                         "stress": {"warmup_seconds": 1, "duration_seconds": 2, "repetitions": 2, "connections": [1000], "request_timeout_seconds": 10, "performance_run": True}}}
 
 
 def report(profile="ci", selection=None):
@@ -45,6 +47,18 @@ def value(profile="ci"):
 
 
 class ChartTests(unittest.TestCase):
+    def test_stress_profile_is_accepted_and_connection_count_is_rendered(self):
+        parser = argparse.ArgumentParser()
+        arguments(parser)
+        args = parser.parse_args(["--report", "results.json", "--output", "charts", "--profile", "stress"])
+        self.assertEqual("stress", args.profile)
+        data = value("stress")
+        self.assertEqual("complete", data["status"])
+        self.assertEqual({1000}, {row["connections"] for row in data["rows"]})
+        with tempfile.TemporaryDirectory() as folder:
+            render(data, folder)
+            self.assertIn("1000 connections", (Path(folder) / "summary.svg").read_text())
+
     def test_recomputes_metrics_in_correct_units_from_raw_trials(self):
         data = value()
         self.assertEqual("complete", data["status"])
@@ -78,6 +92,14 @@ class ChartTests(unittest.TestCase):
         data = dashboard(report(), config(), metadata(), "failure")
         self.assertEqual("incomplete", data["status"])
         self.assertTrue(all(row["valid"] for row in data["rows"]))
+
+    def test_warmup_errors_never_receive_a_performance_score(self):
+        source = report()
+        source["trials"][0]["warmup"] = {"wrk": {"errors": {"connect": 0, "read": 22, "write": 0, "status": 0, "timeout": 0}}}
+        data = dashboard(source, config(), metadata(), "success")
+        self.assertEqual("incomplete", data["status"])
+        self.assertFalse(data["rows"][0]["valid"])
+        self.assertNotIn("rps_median", data["rows"][0])
 
     def test_missing_or_mismatched_report_produces_unavailable_dashboard(self):
         for source in (None, {}, {**report(), "profile_name": "other"}, {**report(), "selected_cases": []}):

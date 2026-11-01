@@ -12,7 +12,7 @@ on:
       profile:
         description: Measurement budget (smoke validates the harness only)
         type: choice
-        options: [ci, full, smoke]
+        options: [ci, full, stress, smoke]
         default: ci
       cases:
         description: "Comma-separated case IDs, or all"

@@ -59,6 +59,24 @@ def pinned(command, cpus):
     return ["taskset", "-c", ",".join(map(str, cpus)), *command] if cpus else command
 
 
+def ensure_file_limit(connections):
+    """Reserve socket/control descriptors in this process and its future children."""
+    before, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    required = max(1024, connections * 2 + 256)
+    after = before
+    if before != resource.RLIM_INFINITY and before < required:
+        if hard != resource.RLIM_INFINITY and hard < required:
+            raise ValueError(f"Need at least {required} file descriptors for {connections} connections; hard limit is {hard}")
+        try:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (required, hard))
+        except (OSError, ValueError) as error:
+            raise ValueError(f"Cannot raise the file descriptor limit to {required}: {error}") from error
+        after = required
+    def label(value):
+        return "unlimited" if value == resource.RLIM_INFINITY else value
+    return {"soft_before": label(before), "soft_after": label(after), "hard": label(hard), "required": required}
+
+
 def stop_group(process):
     # Kill only the session created by this harness, including Node workers.
     try:
@@ -216,8 +234,8 @@ def parse_wrk(text):
     return result
 
 
-def load(wrk, process, port, workload, connections, threads, seconds, cpus, logfile):
-    args = [str(wrk), "-t", str(threads), "-c", str(connections), "-d", f"{seconds}s", "--timeout", "2s", "--latency",
+def load(wrk, process, port, workload, connections, threads, seconds, cpus, logfile, timeout_seconds=2):
+    args = [str(wrk), "-t", str(threads), "-c", str(connections), "-d", f"{seconds}s", "--timeout", f"{timeout_seconds:g}s", "--latency",
             "-s", str(ROOT / "load/report.lua"), f"http://127.0.0.1:{port}{workload['path']}"]
     env = {**os.environ, "BENCH_SCENARIO": workload["id"]}
     server_meter = ProcessMeter(process.pid)
@@ -228,7 +246,7 @@ def load(wrk, process, port, workload, connections, threads, seconds, cpus, logf
         client = subprocess.Popen(pinned(args, cpus), env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         client_meter = ProcessMeter(client.pid, existing=False)
         try:
-            deadline = started + seconds + 15
+            deadline = started + seconds + timeout_seconds + 15
             while client.poll() is None:
                 if time.monotonic() > deadline:
                     raise TimeoutError("wrk exceeded its bounded runtime")
@@ -256,6 +274,9 @@ def load(wrk, process, port, workload, connections, threads, seconds, cpus, logf
 
 def run(config, lock, cases, bundles, output, profile_name, wrk, seed=1337, pin=True, workers=None):
     profile = config["profiles"][profile_name]
+    timeout_seconds = profile.get("request_timeout_seconds", 2)
+    if type(timeout_seconds) not in (int, float) or not math.isfinite(timeout_seconds) or not 0 < timeout_seconds <= 60:
+        raise ValueError("Request timeout must be a finite number in (0, 60] seconds")
     output, bundles = Path(output).resolve(), Path(bundles).resolve()
     output.mkdir(parents=True, exist_ok=False)
     wrk_version = version([str(wrk), "--version"])
@@ -269,9 +290,11 @@ def run(config, lock, cases, bundles, output, profile_name, wrk, seed=1337, pin=
     # wrk divides connections across threads; keep the requested count exact.
     while any(count % threads for count in profile["connections"]):
         threads -= 1
+    file_limits = ensure_file_limit(max(profile["connections"]))
     report = {"schema_version": 1, "started_at": datetime.now(timezone.utc).isoformat(), "profile_name": profile_name,
               "profile": profile, "seed": seed, "hardware": hardware(), "affinity": cpu,
-              "settings": {"server_workers": workers, "client_threads": threads, "protocol": "HTTP/1.1", "middleware": "none", "compression": "identity"},
+              "settings": {"server_workers": workers, "client_threads": threads, "protocol": "HTTP/1.1", "middleware": "none", "compression": "identity",
+                           "request_timeout_seconds": timeout_seconds, "file_descriptor_limits": file_limits},
               "versions": {"wrk": wrk_version, "java": version(["java", "-version"]), "neko": version(["neko", "-version"]),
                            "node": version(["node", "--version"]), "repositories": lock["repositories"]},
               "scripts": {"load/report.lua": sha256(ROOT / "load/report.lua"), "benchmark.json": sha256(ROOT / "benchmark.json")},
@@ -297,10 +320,11 @@ def run(config, lock, cases, bundles, output, profile_name, wrk, seed=1337, pin=
                             try:
                                 trial["health"] = check_health(port, case, workers, health["run_id"], metadata)
                                 trial["preflight"] = preflight(port, workload)
-                                warmup = load(wrk, process, port, workload, connections, threads, profile["warmup_seconds"], cpu["client"], logdir / f"{label}-warmup.log")
+                                warmup = load(wrk, process, port, workload, connections, threads, profile["warmup_seconds"], cpu["client"], logdir / f"{label}-warmup.log", timeout_seconds)
+                                trial["warmup"] = warmup
                                 if any(warmup["wrk"]["errors"].values()):
                                     raise ValueError(f"Warmup errors: {warmup['wrk']['errors']}")
-                                trial.update(load(wrk, process, port, workload, connections, threads, profile["duration_seconds"], cpu["client"], logdir / f"{label}-measure.log"))
+                                trial.update(load(wrk, process, port, workload, connections, threads, profile["duration_seconds"], cpu["client"], logdir / f"{label}-measure.log", timeout_seconds))
                                 if any(trial["wrk"]["errors"].values()):
                                     raise ValueError(f"Measurement errors: {trial['wrk']['errors']}")
                                 if trial["server"].get("process_tree_changed"):
@@ -311,6 +335,14 @@ def run(config, lock, cases, bundles, output, profile_name, wrk, seed=1337, pin=
                                 print(f"OK {case['id']} {label} r{repetition + 1}: {trial['rps']:.1f} req/s", flush=True)
                             except (OSError, ValueError, RuntimeError, TimeoutError, http.client.HTTPException) as error:
                                 trial["error"] = str(error)
+                                # Keep the first load error, and capture backend
+                                # identity even for a rejected stress trial.
+                                try:
+                                    data, _ = request(port, "/health")
+                                    trial["health_after"] = json.loads(data)
+                                    validate_health(trial["health_after"], case, workers, health["run_id"], metadata)
+                                except (OSError, ValueError, RuntimeError, TimeoutError, http.client.HTTPException) as health_error:
+                                    trial["health_after_error"] = str(health_error)
                                 print(f"INVALID {case['id']} {label}: {error}", flush=True)
                             report["trials"].append(trial)
                             completed.add((workload["id"], connections))

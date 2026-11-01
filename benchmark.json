@@ -20,6 +20,7 @@
   "profiles": {
     "smoke": {"warmup_seconds": 1, "duration_seconds": 1, "repetitions": 1, "connections": [4], "performance_run": false},
     "ci": {"warmup_seconds": 3, "duration_seconds": 5, "repetitions": 3, "connections": [32], "performance_run": true},
-    "full": {"warmup_seconds": 5, "duration_seconds": 10, "repetitions": 3, "connections": [16, 128], "performance_run": true}
+    "full": {"warmup_seconds": 5, "duration_seconds": 10, "repetitions": 3, "connections": [16, 128], "performance_run": true},
+    "stress": {"warmup_seconds": 5, "duration_seconds": 10, "repetitions": 3, "connections": [1000], "request_timeout_seconds": 10, "performance_run": true}
   }
 }

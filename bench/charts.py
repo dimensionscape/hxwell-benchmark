@@ -68,9 +68,13 @@ def validate_trial(trial):
             return False
         if int(wrk["requests"]) != wrk["requests"]:
             return False
-        if any(type(wrk["errors"][key]) not in (int, float) or wrk["errors"][key] != 0
-               for key in ("connect", "read", "write", "status", "timeout")):
-            return False
+        measurements = [wrk]
+        if "warmup" in trial:
+            measurements.append(trial["warmup"]["wrk"])
+        for measured in measurements:
+            if any(type(measured["errors"][key]) not in (int, float) or measured["errors"][key] != 0
+                   for key in ("connect", "read", "write", "status", "timeout")):
+                return False
         lat = wrk["latency_us"]
         if not all(finite(lat[key]) for key in ("p50", "p95", "p99", "max")):
             return False
@@ -276,7 +280,8 @@ def read_report(path):
 def arguments(parser):
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--profile", choices=("ci", "full", "smoke"), default="ci")
+    config, _ = load_config()
+    parser.add_argument("--profile", choices=tuple(config["profiles"]), default="ci")
     parser.add_argument("--cases", default="all")
     parser.add_argument("--outcome", choices=("success", "failure", "cancelled", "skipped", "unknown"), default="success")
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", "hxwell/hxwell-benchmark"))

@@ -130,16 +130,43 @@ preflights but are not individually inspected during load. See the upstream
 
 ## Profiles
 
-| Profile | Warmup per trial | Measurement | Repetitions | Connections | Use |
-| --- | ---: | ---: | ---: | --- | --- |
-| `smoke` | 1 s | 1 s | 1 | 4 | Harness validation only; used for PRs |
-| `ci` | 3 s | 5 s | 3 | 32 | Default push/manual run |
-| `full` | 5 s | 10 s | 3 | 16, 128 | Longer manual comparison |
+| Profile | Warmup per trial | Measurement | Repetitions | Connections | Request timeout | Use |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| `smoke` | 1 s | 1 s | 1 | 4 | 2 s | Harness validation only; used for PRs |
+| `ci` | 3 s | 5 s | 3 | 32 | 2 s | Default push/manual run |
+| `full` | 5 s | 10 s | 3 | 16, 128 | 2 s | Longer manual comparison |
+| `stress` | 5 s | 10 s | 3 | 1000 | 10 s | High-concurrency manual run |
 
 Defaults are in `benchmark.json`. Full runs are bounded by the workflow's
 50-minute timeout. CI benchmarks can consume several runner minutes; workflows
 do not run on a recurring schedule. In manual dispatch, choose a profile and
 `all` or a comma-separated list of the case IDs above.
+
+`stress` maintains **1,000 concurrent HTTP/1.1 connections** for every selected
+case and workload. Throughput is measured independently in requests/second.
+The longer request timeout allows queueing under this load; errors/timeouts still
+invalidate a trial. Running all nine cases produces 81 trials and about 20 minutes
+of warmup/load, plus startup and reporting. The README and charts are updated by
+the selected profile's completed main-branch run.
+
+Before starting the servers and clients, the harness checks the process file
+descriptor limit and raises its soft limit when the hard limit permits it.
+Insufficient hard limits fail with an explicit error. Requested connections are
+divided exactly across client threads, and descriptor limits, timeout, CPU use
+and possible client saturation are recorded in the report. Warmup measurements
+and post-error backend diagnostics are retained; failed trials are not retried
+into a passing score. This active-connection
+load measures the complete HTTP path; backend-only costs and many idle sockets
+require a separate poll benchmark.
+
+For a focused C++ poll-backend comparison in GitHub Actions:
+
+```sh
+gh workflow run benchmark.yml --ref main -f profile=stress \
+  -f cases=cpp-crossbyte,cpp-crossbyte-libuv
+```
+
+Choose `cases=all` to run the stress profile across every target/driver.
 
 ## Results and interpretation
 

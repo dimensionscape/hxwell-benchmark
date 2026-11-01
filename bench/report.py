@@ -57,7 +57,7 @@ def write_reports(report, output):
         lines.append(f"| {row['case']} | {row['workload']} | {row['connections']} | {row['samples']}/{row['expected_samples']} | "
                      + " | ".join(number(key) for key in ["rps_median", "p50_ms_median", "p95_ms_median", "p99_ms_median", "peak_group_rss_mib"])
                      + f" | {status} |")
-    lines += ["", "## Run configuration", "", "```json", json.dumps({"profile": report["profile"], "hardware": report["hardware"],
+    lines += ["", "## Run configuration", "", "```json", json.dumps({"profile": report["profile"], "settings": report.get("settings", {}), "hardware": report["hardware"],
               "affinity": report["affinity"], "versions": report["versions"], "seed": report["seed"]}, indent=2), "```", "",
               "Raw per-trial metrics, error counters, preflight responses, CPU/process-group measurements, dependency revisions and commands are in `results.json`.",
               "Server/client logs are retained beside this report. Hosted-runner results are noisy and are not production capacity or SLO guarantees.", ""]
