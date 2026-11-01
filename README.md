@@ -46,7 +46,7 @@ set of claimed performance numbers.
 | --- | --- | --- | --- |
 | `jvm-socket` | JVM | HxWell Socket | Platform-thread pool |
 | `jvm-undertow` | JVM | Undertow | XNIO worker pool |
-| `jvm-crossbyte` | JVM | Crossbyte | Virtual threads, separate I/O runtimes |
+| `jvm-crossbyte` | JVM | Crossbyte | Virtual threads, single I/O runtime |
 | `neko-socket` | Neko | HxWell Socket | Platform-thread pool |
 | `neko-crossbyte` | Neko | Crossbyte | Worker pool, separate I/O runtimes |
 | `js-nodehttp` | JavaScript/Node | NodeHTTP | Cluster workers |
@@ -116,6 +116,14 @@ traces and Crossbyte logging, and disables response compression and Crossbyte's
 default per-address rate limiter. Crossbyte's keep-alive request-count cap is
 disabled for this load test. All cases request HTTP/1.1 keep-alive and identity
 encoding; this is not an HTTP/2, TLS, WebSocket or full middleware benchmark.
+
+JVM Crossbyte uses `maxConnections=10000`, `maxConcurrentRequests=2000`,
+`poolSize=16` and `runtimeCount=0`, with per-address rate limiting disabled.
+Connections stay on the listener's I/O runtime, avoiding the bounded connection
+handoff queue under connection bursts; HxWell requests still run on virtual
+threads. The JVM driver does not use the configured pool size to execute
+requests. Other Crossbyte targets retain the configured worker pool and separate
+I/O runtimes.
 
 The JVM heap is fixed at 256 MiB; Node's old-space limit is 256 MiB per process.
 These are runtime settings, not equivalent total-memory limits. Socket pool,

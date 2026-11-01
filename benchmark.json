@@ -4,7 +4,7 @@
   "cases": [
     {"id": "jvm-socket", "target": "jvm", "driver": "socket", "dispatch": "platform-thread pool"},
     {"id": "jvm-undertow", "target": "jvm", "driver": "undertow", "dispatch": "XNIO worker pool"},
-    {"id": "jvm-crossbyte", "target": "jvm", "driver": "crossbyte", "dispatch": "virtual threads + I/O runtimes"},
+    {"id": "jvm-crossbyte", "target": "jvm", "driver": "crossbyte", "dispatch": "virtual threads + single I/O runtime"},
     {"id": "neko-socket", "target": "neko", "driver": "socket", "dispatch": "platform-thread pool"},
     {"id": "neko-crossbyte", "target": "neko", "driver": "crossbyte", "dispatch": "worker pool + I/O runtimes"},
     {"id": "js-nodehttp", "target": "js", "driver": "nodehttp", "dispatch": "Node cluster workers"},
