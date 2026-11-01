@@ -1,5 +1,6 @@
 """Render a validated benchmark dashboard and its managed README section."""
 import argparse
+from collections import Counter
 from datetime import datetime, timezone
 import json
 import math
@@ -13,7 +14,7 @@ from .config import load_config, select_cases
 START = "<!-- benchmark-charts:start -->"
 END = "<!-- benchmark-charts:end -->"
 ASSET_PATH = "docs/benchmarks/latest"
-CHART_LAYOUT = 3
+CHART_LAYOUT = 4
 METRICS = (
     ("rps_median", "RPS", "requests / second · higher is better"),
     ("p99_ms_median", "p99", "p99 latency · milliseconds · lower is better"),
@@ -97,7 +98,7 @@ def dashboard(report, config, run, outcome, profile_name="ci", selection="all"):
     value = {"schema_version": 1, "run": run, "outcome": outcome, "profile_name": profile_name, "profile": profile,
              "cases": cases, "targets": [{"id": target, "cases": names} for target, names in targets.items()],
              "case_colors": {case["id"]: COLORS[i % len(COLORS)] for i, case in enumerate(config["cases"])},
-             "workloads": workloads, "expected_trials": expected, "valid_trials": 0,
+             "workloads": workloads, "expected_trials": expected, "valid_trials": 0, "scored_trials": 0,
              "finished_at": None, "rows": [], "status": "unavailable", "message": "No benchmark report was produced."}
     if report is not None:
         try:
@@ -127,13 +128,16 @@ def dashboard(report, config, run, outcome, profile_name="ci", selection="all"):
                 for workload in workloads:
                     for case in cases:
                         samples = grouped.get((case, workload, connections), [])
+                        repeats = Counter(sample["repetition"] for sample in samples)
+                        valid_samples = sum(repeats[sample["repetition"]] == 1 and validate_trial(sample) for sample in samples)
+                        value["valid_trials"] += valid_samples
                         valid = (len(samples) == profile["repetitions"]
                                  and {sample["repetition"] for sample in samples} == set(range(1, profile["repetitions"] + 1))
-                                 and all(validate_trial(sample) for sample in samples))
+                                 and valid_samples == len(samples))
                         row = {"case": case, "workload": workload, "connections": connections,
-                               "valid": valid, "samples": len(samples)}
+                               "valid": valid, "samples": len(samples), "valid_samples": valid_samples}
                         if valid:
-                            value["valid_trials"] += len(samples)
+                            value["scored_trials"] += len(samples)
                             rates = [sample["wrk"]["requests"] / (sample["wrk"]["duration_us"] / 1e6) for sample in samples]
                             memory = [sample.get("server", {}).get("peak_group_rss_bytes") for sample in samples]
                             row.update(rps_median=statistics.median(rates), rps_min=min(rates), rps_max=max(rates),
@@ -141,7 +145,7 @@ def dashboard(report, config, run, outcome, profile_name="ci", selection="all"):
                                        peak_group_rss_mib=max(memory) / 1048576 if all(finite(n) for n in memory) else None,
                                        client_saturated=any(sample.get("client_saturated", False) for sample in samples))
                         value["rows"].append(row)
-            complete = not bad_shape and value["finished_at"] is not None and len(trials) == expected and value["valid_trials"] == expected and report.get("success") is True and outcome == "success"
+            complete = not bad_shape and value["finished_at"] is not None and len(trials) == expected and value["scored_trials"] == expected and report.get("success") is True and outcome == "success"
             value["status"] = ("complete" if profile["performance_run"] else "smoke") if complete else "incomplete"
             value["message"] = ("All selected measurements passed." if complete else "Incomplete or failed run; invalid groups have no score.")
             if not profile["performance_run"]:
@@ -149,7 +153,7 @@ def dashboard(report, config, run, outcome, profile_name="ci", selection="all"):
             value["hardware"] = {key: report.get("hardware", {}).get(key) for key in ("os", "arch", "cpu_model", "logical_cpus")}
             value["affinity"] = report.get("affinity", {})
         except (KeyError, TypeError, ValueError, OverflowError, AttributeError):
-            value.update(status="unavailable", valid_trials=0, rows=[], message="Benchmark report was missing or invalid; no scores are published.")
+            value.update(status="unavailable", valid_trials=0, scored_trials=0, rows=[], message="Benchmark report was missing or invalid; no scores are published.")
     return value
 
 
@@ -177,9 +181,14 @@ def render(value, output, preview=False):
         height = max(1.25, len(cases) * 0.32 + 0.65) * rows + 1.85
         fig, axes = plt.subplots(rows, len(workloads), squeeze=False, figsize=(12.8, height), facecolor="#f8fafc")
         fig.suptitle(view["title"], fontsize=18, fontweight="bold", x=0.02, ha="left", y=1 - 0.12 / height).set_in_layout(False)
-        valid = sum(row["samples"] for row in value["rows"] if row["case"] in cases and row["valid"])
+        valid = sum(row["valid_samples"] for row in value["rows"] if row["case"] in cases)
+        scored_count = sum(row["samples"] for row in value["rows"] if row["case"] in cases and row["valid"])
         expected = len(cases) * len(workloads) * len(profile["connections"]) * profile["repetitions"]
-        detail = (f"{status}  |  {value['profile_name']}  |  {valid}/{expected} valid trials  |  "
+        view_status = status
+        if view["filename"] != "summary.svg" and value["status"] == "incomplete" and scored_count == expected:
+            view_status = "TARGET COMPLETE · RUN INCOMPLETE"
+        eligible = f"  |  {scored_count} eligible for scoring" if scored_count != valid else ""
+        detail = (f"{view_status}  |  {value['profile_name']}  |  {valid}/{expected} valid trials{eligible}  |  "
                   f"{profile['repetitions']} repeats × {profile['duration_seconds']} s")
         fig.text(0.02, 1 - 0.46 / height, detail, fontsize=10,
                  color="#475569" if value["status"] == "complete" else "#b45309")
@@ -194,10 +203,10 @@ def render(value, output, preview=False):
                     ax.set_ylim(len(cases) - 0.4, -0.6)
                     ax.set_axisbelow(True)
                     ax.grid(axis="x", color="#e2e8f0", linewidth=0.7)
-                    # Keep the same metric/workload scale and case color in the
-                    # summary and every target, even when a target has one driver.
+                    # Case colors are shared; target views use their own scale
+                    # so an unrelated slow target cannot hide their differences.
                     scale_metric = "rps_max" if metric == "rps_median" else metric
-                    numbers = [entry[scale_metric] for case in value["cases"]
+                    numbers = [entry[scale_metric] for case in cases
                                if scored(entry := lookup.get((case, workload, connections), {}), metric)]
                     for index, case in enumerate(cases):
                         entry = lookup.get((case, workload, connections), {})
@@ -252,7 +261,11 @@ def readme_block(value):
              f"Finished: `{value['finished_at'] or 'not available'}`.", "", value["message"], "",
              f"![Summary: all targets, throughput, p99 latency and memory]({ASSET_PATH}/summary.svg?run={key})", "",
              "Each chart shows throughput, p99 latency and peak RSS for plaintext, JSON and echo. "
-             "Summary and target charts use matching scales and colors; workloads and connection levels remain separate.", ""]
+             "Case colors are consistent across views; each target uses its own axis scales for detail. "
+             "Workloads and connection levels remain separate.", ""]
+    if value["scored_trials"] != value["valid_trials"]:
+        lines.extend([f"{value['scored_trials']} valid trials belong to complete groups and are eligible for scoring; "
+                      "a group with a missing or failed repetition has no bar.", ""])
     for group in value["targets"]:
         title = TARGET_LABELS.get(group["id"], group["id"].upper())
         lines.extend([f"## {title}", "", f"![{title} benchmark results]({ASSET_PATH}/{target_filename(group['id'])}?run={key})", ""])

@@ -80,7 +80,8 @@ requests, and manual dispatch:
 5. Generate one combined summary SVG, followed by separate JVM, Neko,
    JavaScript/Node and C++ charts for the selected targets. Each chart includes
    throughput, p99 latency and peak RSS, with separate workload/connection panels
-   and matching scales and case colors across views. A separate publishing job
+   and consistent case colors across views. Target charts use their own axis scales
+   to keep within-target differences visible. A separate publishing job
    updates the managed README section and `docs/benchmarks/latest/` for each
    completed `main` push or manual run, including unsuccessful runs.
 
@@ -97,7 +98,6 @@ charts are removed when a run selects fewer targets; unrelated files are preserv
 The publisher uses a non-forced, fast-forward Git reference update. On a concurrent edit it rereads the latest README and preserves
 text outside the chart markers. Its `GITHUB_TOKEN` commit does not start another
 benchmark; generated README/chart paths are also excluded from push triggers.
-
 On Linux, available CPUs are split into disjoint server and client sets using
 `taskset`; every child, including Node cluster workers, inherits its set. The
 server worker budget equals the size of its CPU set unless explicitly overridden.

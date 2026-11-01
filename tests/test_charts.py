@@ -98,6 +98,9 @@ class ChartTests(unittest.TestCase):
         source["trials"][0]["warmup"] = {"wrk": {"errors": {"connect": 0, "read": 22, "write": 0, "status": 0, "timeout": 0}}}
         data = dashboard(source, config(), metadata(), "success")
         self.assertEqual("incomplete", data["status"])
+        self.assertEqual(7, data["valid_trials"])
+        self.assertEqual(6, data["scored_trials"])
+        self.assertEqual(1, data["rows"][0]["valid_samples"])
         self.assertFalse(data["rows"][0]["valid"])
         self.assertNotIn("rps_median", data["rows"][0])
 
