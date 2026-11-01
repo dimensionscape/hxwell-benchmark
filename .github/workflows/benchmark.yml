@@ -87,17 +87,18 @@ jobs:
           case "$TARGET" in
             jvm) haxelib install hxjava 4.2.0 --always --quiet ;;
             js) haxelib install hxnodejs 12.2.0 --always --quiet ;;
-            cpp) haxelib install hxcpp 4.3.2 --always --quiet ;;
           esac
       - name: Fetch immutable source and verified jar dependencies
         env:
           DRIVER: ${{ matrix.driver }}
+          TARGET: ${{ matrix.target }}
         run: |
           case "$DRIVER" in
             crossbyte) NAMES=hxwell,hxwell-crossbyte,crossbyte,emitter ;;
             undertow) NAMES=hxwell,maven ;;
             *) NAMES=hxwell ;;
           esac
+          if [ "$TARGET" = cpp ]; then NAMES="$NAMES,hxcpp"; fi
           python -m bench fetch --names "$NAMES"
       - name: Build release application
         env:

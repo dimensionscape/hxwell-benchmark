@@ -49,6 +49,7 @@ set of claimed performance numbers.
 | `neko-crossbyte` | Neko | Crossbyte | Worker pool, separate I/O runtimes |
 | `js-nodehttp` | JavaScript/Node | NodeHTTP | Cluster workers |
 | `cpp-socket` | C++/hxcpp | HxWell Socket | Platform-thread pool |
+| `cpp-crossbyte` | C++/hxcpp | Crossbyte | Worker pool, separate I/O runtimes |
 
 The actual target, driver, worker count and JVM virtual-thread state are checked
 through `/health`; a mismatched build is never measured. No driver source is
@@ -162,7 +163,12 @@ workloads and hardware; retain the raw trials.
 ## Reproducible dependencies
 
 `dependencies.lock.json` pins HxWell, the Crossbyte adapter, Crossbyte, Emitter,
-wrk and Haxelib versions. Undertow jars have SHA-256 hashes verified against the
+hxcpp, wrk and Haxelib versions. Both C++ cases use the same immutable commit of
+the [Dimensionscape hxcpp production runtime](https://github.com/dimensionscape/hxcpp/tree/308afd7a20b143338598d084bf2345d1349a22c8).
+Crossbyte requires its native socket/TLS support; the Haxelib hxcpp 4.3.2 release
+does not contain the required build files. The harness builds the runtime tools
+with the pinned Haxe compiler and registers it only inside each isolated build.
+Undertow jars have SHA-256 hashes verified against the
 official Maven artifacts. Node's native `deasync` dependency uses
 `app/package-lock.json`. Builds create a local Haxelib repository in a temporary
 build directory; they do not change global dev registrations.
@@ -187,7 +193,8 @@ hashes and are transferred as tar archives to preserve executable modes.
 
 Use Python 3.12+, Haxe **4.3.7**, Git, the selected runtimes and wrk 4.2.0 on a
 POSIX host. Node builds use Node 22.13.0 and npm; JVM runs require Java 21+.
-C++ builds require the locked hxcpp 4.3.2 toolchain and a C++ compiler.
+C++ builds require a C++ compiler; `bench fetch` downloads the locked hxcpp
+runtime and `bench build` prepares its tools automatically.
 
 ```sh
 haxelib install haxe-concurrent 5.1.5
@@ -196,7 +203,6 @@ haxelib install crypto 1.3.0
 haxelib install hxjava 4.2.0
 # For the corresponding optional targets:
 haxelib install hxnodejs 12.2.0
-haxelib install hxcpp 4.3.2
 
 python3 -m pip install -r requirements-charts.txt
 python3 -m unittest discover -s tests -v
@@ -207,6 +213,12 @@ python3 -m bench build --case jvm-socket --haxe /path/to/haxe-4.3.7/haxe
 python3 -m bench build --case jvm-crossbyte --haxe /path/to/haxe-4.3.7/haxe
 python3 -m bench run --cases jvm-socket,jvm-crossbyte \
   --profile smoke --wrk "$PWD/dependencies/wrk/wrk" --out out/local-smoke
+
+# Native C++ comparison, including the Crossbyte driver:
+python3 -m bench build --case cpp-socket --haxe /path/to/haxe-4.3.7/haxe
+python3 -m bench build --case cpp-crossbyte --haxe /path/to/haxe-4.3.7/haxe
+python3 -m bench run --cases cpp-socket,cpp-crossbyte \
+  --profile ci --wrk "$PWD/dependencies/wrk/wrk" --out out/local-cpp
 ```
 
 On macOS, supply the installed OpenSSL prefix to `WITH_OPENSSL` (for example

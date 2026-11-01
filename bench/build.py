@@ -53,6 +53,12 @@ def build(config, lock, case, deps, output, haxe="haxe"):
     (work / "command.json").write_text(json.dumps(args, indent=2) + "\n")
     started = time.monotonic()
     with (work / "build.log").open("w") as log:
+        if target == "cpp":
+            # Both C++ drivers use the same locked runtime. Build the Git
+            # checkout's tools with the pinned Haxe, never a global hxcpp.
+            for tool in ("run", "hxcpp"):
+                command([haxe, "compile.hxml"], cwd=work / "toolchain/hxcpp/tools" / tool,
+                        stdout=log, stderr=subprocess.STDOUT, timeout=120)
         command(args, cwd=work, stdout=log, stderr=subprocess.STDOUT, timeout=900)
     destination.mkdir()
     for directory in ("public", "cache", "session"):

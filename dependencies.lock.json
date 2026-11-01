@@ -17,6 +17,10 @@
       "url": "https://github.com/Dimensionscape/Emitter.git",
       "revision": "06b396f584271e24a7dc18dcfadfd020c567cc6a"
     },
+    "hxcpp": {
+      "url": "https://github.com/dimensionscape/hxcpp.git",
+      "revision": "308afd7a20b143338598d084bf2345d1349a22c8"
+    },
     "wrk": {
       "url": "https://github.com/wg/wrk.git",
       "revision": "a211dd5a7050b1f9e8a9870b95513060e72ac4a0"
@@ -27,8 +31,7 @@
     "uuid": "2.4.1",
     "crypto": "1.3.0",
     "hxjava": "4.2.0",
-    "hxnodejs": "12.2.0",
-    "hxcpp": "4.3.2"
+    "hxnodejs": "12.2.0"
   },
   "maven": [
     {

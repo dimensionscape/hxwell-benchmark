@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import urllib.request
 
@@ -89,10 +90,10 @@ def local_haxelib(work, deps, lock, case):
         names += ["hxjava"]
     if case["target"] == "js":
         names += ["hxnodejs"]
-    if case["target"] == "cpp":
-        names += ["hxcpp"]
     libraries = {name: library_path(name, lock["haxelib"][name]) for name in names}
     repositories = ["hxwell"]
+    if case["target"] == "cpp":
+        repositories += ["hxcpp"]
     if case["driver"] == "crossbyte":
         repositories += ["hxwell-crossbyte", "crossbyte", "emitter"]
     for name in repositories:
@@ -105,6 +106,12 @@ def local_haxelib(work, deps, lock, case):
             raise ValueError(f"Wrong dependency revision: {name}")
         if capture(["git", "status", "--porcelain"], cwd=path):
             raise ValueError(f"Dirty dependency: {name}")
+        if name == "hxcpp":
+            # Bootstrapping replaces the tracked run.n. Keep the immutable
+            # checkout pristine and isolate compiler output between builds.
+            runtime = work / "toolchain/hxcpp"
+            shutil.copytree(path, runtime, ignore=shutil.ignore_patterns(".git", "hxcpp.n", "obj", "__pch"))
+            path = runtime
         libraries[name] = path
     command(["haxelib", "newrepo"], cwd=work, stdout=subprocess.DEVNULL)
     for name, path in libraries.items():

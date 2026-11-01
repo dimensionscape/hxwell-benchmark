@@ -83,8 +83,9 @@ class HarnessTests(unittest.TestCase):
 
     def test_matrix_is_explicit_and_rejects_unknown_or_duplicate_cases(self):
         config, lock = load_config()
-        self.assertEqual(7, len(select_cases(config)))
-        self.assertEqual(["jvm-socket", "neko-crossbyte"], [c["id"] for c in select_cases(config, "jvm-socket,neko-crossbyte")])
+        self.assertEqual(8, len(select_cases(config)))
+        self.assertEqual(["jvm-socket", "neko-crossbyte", "cpp-crossbyte"],
+                         [c["id"] for c in select_cases(config, "jvm-socket,neko-crossbyte,cpp-crossbyte")])
         for text in ("", "jvm-socket,jvm-socket", "jvm-unknown", "../../tmp", "all;echo bad"):
             with self.assertRaises(ValueError):
                 select_cases(config, text)
