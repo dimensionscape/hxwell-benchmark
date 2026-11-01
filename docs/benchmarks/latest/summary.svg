@@ -2241,7 +2241,7 @@ L 907.272 796.358125
    <text style="font-weight: 700; font-size: 18px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f172a" x="18.432" y="22.317187" transform="rotate(-0 18.432 22.317187)">Summary · all selected targets</text>
   </g>
   <g id="text_162">
-   <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #b45309" x="18.432" y="33.12" transform="rotate(-0 18.432 33.12)">INCOMPLETE / FAILED  |  stress  |  69/81 valid trials  |  3 repeats × 10 s</text>
+   <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #b45309" x="18.432" y="33.12" transform="rotate(-0 18.432 33.12)">INCOMPLETE / FAILED  |  stress  |  75/81 valid trials  |  69 eligible for scoring  |  3 repeats × 10 s</text>
   </g>
   <g id="text_163">
    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #475569" x="18.432" y="854.64" transform="rotate(-0 18.432 854.64)">RPS: median; whiskers: min–max. p99: median of per-trial percentiles, not a pooled percentile.</text>
