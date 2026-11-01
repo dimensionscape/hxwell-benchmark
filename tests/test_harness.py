@@ -17,7 +17,7 @@ from bench.build import unpack
 from bench.config import load_config, select_cases
 from bench.metrics import parse_stat
 from bench.report import summarize, write_reports
-from bench.run import MARKER, parse_wrk, preflight, stop_group
+from bench.run import MARKER, parse_wrk, preflight, stop_group, validate_health
 from bench.vendor import verify_snapshot
 from bench.dependencies import sha256
 
@@ -83,13 +83,52 @@ class HarnessTests(unittest.TestCase):
 
     def test_matrix_is_explicit_and_rejects_unknown_or_duplicate_cases(self):
         config, lock = load_config()
-        self.assertEqual(8, len(select_cases(config)))
-        self.assertEqual(["jvm-socket", "neko-crossbyte", "cpp-crossbyte"],
-                         [c["id"] for c in select_cases(config, "jvm-socket,neko-crossbyte,cpp-crossbyte")])
+        self.assertEqual(9, len(select_cases(config)))
+        self.assertEqual(["jvm-socket", "neko-crossbyte", "cpp-crossbyte", "cpp-crossbyte-libuv"],
+                         [c["id"] for c in select_cases(config, "jvm-socket,neko-crossbyte,cpp-crossbyte,cpp-crossbyte-libuv")])
         for text in ("", "jvm-socket,jvm-socket", "jvm-unknown", "../../tmp", "all;echo bad"):
             with self.assertRaises(ValueError):
                 select_cases(config, text)
         self.assertEqual(40, len(lock["repositories"]["wrk"]["revision"]))
+
+    def test_libuv_configuration_requires_native_crossbyte(self):
+        config, lock = load_config()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "dependencies.lock.json").write_text(json.dumps(lock))
+            for key, bad in (("target", "neko"), ("driver", "socket"), ("poll_backend", "unknown")):
+                changed = json.loads(json.dumps(config))
+                changed["cases"][-1][key] = bad
+                (root / "benchmark.json").write_text(json.dumps(changed))
+                with patch("bench.config.ROOT", root), self.assertRaises(ValueError):
+                    load_config()
+
+    def test_health_rejects_libuv_fallback_and_wrong_native_library(self):
+        case = {"id": "cpp-crossbyte-libuv", "target": "cpp", "driver": "crossbyte", "poll_backend": "libuv"}
+        metadata = {"libraries": {"libhxcpp": "6.0.0"}, "native_libraries": {"libuv": {"version": "1.51.0"}}}
+        health = {"run_id": "owned", "case_id": case["id"], "target": "cpp", "driver": "crossbyte", "workers": 1,
+                  "virtual_thread": False, "cpp_runtime": "libhxcpp", "cpp_runtime_version": "6.0.0",
+                  "poll_backend": "libuv", "libuv_version": "1.51.0"}
+        validate_health(health, case, 1, "owned", metadata)
+        for key, bad in (("poll_backend", "builtin-fallback"), ("poll_backend", None), ("libuv_version", "1.48.0"),
+                         ("cpp_runtime", "hxcpp"), ("cpp_runtime_version", "4.3.0"), ("virtual_thread", True),
+                         ("run_id", "another-process")):
+            with self.assertRaises(RuntimeError):
+                validate_health({**health, key: bad}, case, 1, "owned", metadata)
+
+    def test_all_cpp_drivers_require_libhxcpp_and_builtin_remains_distinct(self):
+        config, _ = load_config()
+        metadata = {"libraries": {"libhxcpp": "6.0.0"}, "native_libraries": {"libuv": {"version": "1.51.0"}}}
+        for case in (c for c in config["cases"] if c["target"] == "cpp"):
+            health = {"run_id": "owned", "case_id": case["id"], "target": "cpp", "driver": case["driver"], "workers": 1,
+                      "virtual_thread": False, "cpp_runtime": "libhxcpp", "cpp_runtime_version": "6.0.0",
+                      "poll_backend": case.get("poll_backend", "not-applicable"), "libuv_version": "1.51.0"}
+            validate_health(health, case, 1, "owned", metadata)
+            with self.assertRaises(RuntimeError):
+                validate_health({**health, "cpp_runtime": "hxcpp"}, case, 1, "owned", metadata)
+            if case.get("poll_backend") == "builtin":
+                with self.assertRaises(RuntimeError):
+                    validate_health({**health, "poll_backend": "libuv"}, case, 1, "owned", metadata)
 
     def test_wrk_structured_units_and_error_counters(self):
         data = measurement()

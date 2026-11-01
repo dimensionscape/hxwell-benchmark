@@ -88,17 +88,24 @@ jobs:
             jvm) haxelib install hxjava 4.2.0 --always --quiet ;;
             js) haxelib install hxnodejs 12.2.0 --always --quiet ;;
           esac
+      - name: Install native build tools
+        if: matrix.target == 'cpp'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential cmake
       - name: Fetch immutable source and verified jar dependencies
         env:
           DRIVER: ${{ matrix.driver }}
           TARGET: ${{ matrix.target }}
+          POLL_BACKEND: ${{ matrix.poll_backend || 'default' }}
         run: |
           case "$DRIVER" in
             crossbyte) NAMES=hxwell,hxwell-crossbyte,crossbyte,emitter ;;
             undertow) NAMES=hxwell,maven ;;
             *) NAMES=hxwell ;;
           esac
-          if [ "$TARGET" = cpp ]; then NAMES="$NAMES,hxcpp"; fi
+          if [ "$TARGET" = cpp ]; then NAMES="$NAMES,libhxcpp"; fi
+          if [ "$POLL_BACKEND" = libuv ]; then NAMES="$NAMES,crossbyte-libuv,libuv"; fi
           python -m bench fetch --names "$NAMES"
       - name: Build release application
         env:

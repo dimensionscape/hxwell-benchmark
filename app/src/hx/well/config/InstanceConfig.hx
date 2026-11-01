@@ -7,6 +7,10 @@ class InstanceConfig implements IConfig {
     public function new() {}
     public function get():Array<IInstance> {
         #if bench_crossbyte
+        #if bench_libuv
+        if(!crossbyte.libuv.LibuvPoll.install())
+            throw new haxe.Exception("The libuv benchmark requires native libuv support");
+        #end
         return [hx.well.http.driver.crossbyte.CrossbyteInstance.builder()
             .setHost("127.0.0.1").setPort(Settings.port).setPoolSize(Settings.workers)
             .setMaxConnections(Settings.connections).setMaxConcurrentRequests(Settings.connections)

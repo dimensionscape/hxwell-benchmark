@@ -8,6 +8,8 @@ class Settings {
     public static var caseId:String = haxe.macro.Compiler.getDefine("bench_case");
     public static var driver:String = haxe.macro.Compiler.getDefine("bench_driver");
     public static var target:String = #if jvm "jvm" #elseif neko "neko" #elseif js "js" #elseif cpp "cpp" #else "unsupported" #end;
+    public static var cppRuntime:String = #if (cpp && libhxcpp) "libhxcpp" #elseif cpp "hxcpp" #else "" #end;
+    public static var cppRuntimeVersion:String = #if (cpp && libhxcpp) haxe.macro.Compiler.getDefine("libhxcpp") #else "" #end;
 
     static function integer(name:String, fallback:Int, minimum:Int, maximum:Int):Int {
         var text = Sys.getEnv(name);

@@ -11,6 +11,10 @@ def load_config():
     ids = [case["id"] for case in config["cases"]]
     if len(ids) != len(set(ids)) or any(not re.fullmatch(r"[a-z][a-z0-9-]+", value) for value in ids):
         raise ValueError("Case IDs must be unique safe names")
+    for case in config["cases"]:
+        if "poll_backend" in case and (case["target"] != "cpp" or case["driver"] != "crossbyte"
+                                       or case["poll_backend"] not in ("builtin", "libuv")):
+            raise ValueError("Explicit poll backends require a C++ Crossbyte case")
     for name, repo in lock["repositories"].items():
         if not re.fullmatch(r"[0-9a-f]{40}", repo["revision"]):
             raise ValueError(f"Repository {name} must use a full immutable commit")

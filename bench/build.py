@@ -9,7 +9,26 @@ import tempfile
 import time
 
 from .config import ROOT
-from .dependencies import capture, command, local_haxelib, sha256
+from .dependencies import capture, command, local_haxelib, sha256, verify_repository
+
+
+def build_libuv(deps, work, lock, log):
+    """Build the pinned libuv statically so bundles need no host libuv package."""
+    source = deps / "libuv"
+    verify_repository(source, lock["repositories"]["libuv"])
+    build_dir, prefix = work / "libuv-build", work / "native-deps/libuv"
+    command(["cmake", "-S", source, "-B", build_dir, "-DCMAKE_BUILD_TYPE=Release",
+             "-DLIBUV_BUILD_SHARED=OFF", "-DLIBUV_BUILD_TESTS=OFF", "-DLIBUV_BUILD_BENCH=OFF",
+             "-DBUILD_TESTING=OFF", "-DCMAKE_INSTALL_LIBDIR=lib", f"-DCMAKE_INSTALL_PREFIX={prefix}"],
+            stdout=log, stderr=subprocess.STDOUT, timeout=120)
+    command(["cmake", "--build", build_dir, "--target", "uv_a", "--parallel", "2"],
+            stdout=log, stderr=subprocess.STDOUT, timeout=300)
+    command(["cmake", "--install", build_dir], stdout=log, stderr=subprocess.STDOUT, timeout=120)
+    archive = prefix / "lib/libuv.a"
+    if not archive.is_file() or not (prefix / "include/uv.h").is_file():
+        raise ValueError("Expected a static libuv installation")
+    return prefix, {"version": "1.51.0", "linkage": "static", "archive_sha256": sha256(archive),
+                    "revision": lock["repositories"]["libuv"]["revision"]}
 
 
 def build(config, lock, case, deps, output, haxe="haxe"):
@@ -46,19 +65,23 @@ def build(config, lock, case, deps, output, haxe="haxe"):
         args += ["-lib", "hxnodejs", "-D", "js-es=6", "--js", "server.js"]
         launch = ["node", "--max-old-space-size=256", "server.js"]
     elif target == "cpp":
-        args += ["--cpp", "native"]
+        args += ["-lib", "libhxcpp", "--cpp", "native"]
         launch = ["./server"]
     else:
         raise ValueError(f"Unsupported target: {target}")
-    (work / "command.json").write_text(json.dumps(args, indent=2) + "\n")
+    native_libraries = {}
     started = time.monotonic()
     with (work / "build.log").open("w") as log:
         if target == "cpp":
-            # Both C++ drivers use the same locked runtime. Build the Git
-            # checkout's tools with the pinned Haxe, never a global hxcpp.
+            # Every C++ case uses the same pinned OpenFL runtime and Haxe.
             for tool in ("run", "hxcpp"):
-                command([haxe, "compile.hxml"], cwd=work / "toolchain/hxcpp/tools" / tool,
+                command([haxe, "compile.hxml"], cwd=work / "toolchain/libhxcpp/tools" / tool,
                         stdout=log, stderr=subprocess.STDOUT, timeout=120)
+        if case.get("poll_backend") == "libuv":
+            prefix, native_libraries["libuv"] = build_libuv(deps, work, lock, log)
+            args += ["-lib", "crossbyte-libuv", "-D", "bench_libuv", "-D", "crossbyte_libuv_native",
+                     "-D", f"LIBUV_INCLUDE={prefix / 'include'}", "-D", f"LIBUV_LIB={prefix / 'lib'}"]
+        (work / "command.json").write_text(json.dumps(args, indent=2) + "\n")
         command(args, cwd=work, stdout=log, stderr=subprocess.STDOUT, timeout=900)
     destination.mkdir()
     for directory in ("public", "cache", "session"):
@@ -80,7 +103,7 @@ def build(config, lock, case, deps, output, haxe="haxe"):
     files = {str(path.relative_to(destination)): sha256(path) for path in destination.rglob("*") if path.is_file()}
     metadata = {"schema_version": 1, "case": case, "command": launch, "haxe_version": config["haxe_version"],
                 "build_seconds": time.monotonic() - started, "build_os": platform.system(), "build_arch": platform.machine(),
-                "repositories": lock["repositories"], "libraries": libraries, "files": files,
+                "repositories": lock["repositories"], "libraries": libraries, "native_libraries": native_libraries, "files": files,
                 "build_command": args, "workloads_sha256": sha256(ROOT / "benchmark.json")}
     (destination / "build.json").write_text(json.dumps(metadata, indent=2) + "\n")
     shutil.copy2(work / "build.log", destination / "build.log")

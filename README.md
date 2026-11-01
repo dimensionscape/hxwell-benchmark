@@ -48,11 +48,16 @@ set of claimed performance numbers.
 | `neko-socket` | Neko | HxWell Socket | Platform-thread pool |
 | `neko-crossbyte` | Neko | Crossbyte | Worker pool, separate I/O runtimes |
 | `js-nodehttp` | JavaScript/Node | NodeHTTP | Cluster workers |
-| `cpp-socket` | C++/hxcpp | HxWell Socket | Platform-thread pool |
-| `cpp-crossbyte` | C++/hxcpp | Crossbyte | Worker pool, separate I/O runtimes |
+| `cpp-socket` | C++/libhxcpp | HxWell Socket | Platform-thread pool |
+| `cpp-crossbyte` | C++/libhxcpp | Crossbyte | Worker pool, built-in polling |
+| `cpp-crossbyte-libuv` | C++/libhxcpp | Crossbyte + libuv | Worker pool, libuv polling |
 
 The actual target, driver, worker count and JVM virtual-thread state are checked
-through `/health`; a mismatched build is never measured. No driver source is
+through `/health`; a mismatched build is never measured. Every C++ case must
+report the pinned `libhxcpp` version. Crossbyte C++ cases inspect the actual
+request I/O runtime before and after each trial: the built-in case must stay on
+the built-in poller, and the libuv case must stay on libuv. A libuv fallback or
+wrong linked libuv version invalidates the measurement. No driver source is
 patched for benchmarking. PHP's development server, HashLink and unsupported
 target/driver combinations are not silently substituted for these cases.
 
@@ -163,11 +168,22 @@ workloads and hardware; retain the raw trials.
 ## Reproducible dependencies
 
 `dependencies.lock.json` pins HxWell, the Crossbyte adapter, Crossbyte, Emitter,
-hxcpp, wrk and Haxelib versions. Both C++ cases use the same immutable commit of
-the [Dimensionscape hxcpp production runtime](https://github.com/dimensionscape/hxcpp/tree/308afd7a20b143338598d084bf2345d1349a22c8).
-Crossbyte requires its native socket/TLS support; the Haxelib hxcpp 4.3.2 release
-does not contain the required build files. The harness builds the runtime tools
-with the pinned Haxe compiler and registers it only inside each isolated build.
+OpenFL libhxcpp, crossbyte-libuv, native libuv, wrk and Haxelib versions. All three
+C++ cases use the same [OpenFL libhxcpp commit](https://github.com/openfl/libhxcpp/tree/04f436bc68c0f6f119ca1863c12974693ae8bcc7).
+Each build prepares a separate runtime copy and registers both `libhxcpp` and
+Haxe's compatibility name `hxcpp` to that copy. Build metadata and the live
+health endpoint identify the runtime as libhxcpp 6.0.0.
+
+The [crossbyte-libuv extension](https://github.com/DimensionscapeOrg/crossbyte-libuv/tree/49344cefa751569a20a56e530a793fab958da2fa)
+is installed before the first Crossbyte runtime exists and enabled only for
+`cpp-crossbyte-libuv`. CMake builds libuv 1.51.0 from its pinned source into a
+static archive in the build directory; the executable needs no system libuv
+package. Its source revision, archive hash and linked runtime version are
+recorded. The other C++ case keeps Crossbyte's built-in poll backend.
+On macOS, the libuv build preincludes the SDK's `uuid_t` definition to avoid a
+case-insensitive collision with Haxe's generated `uuid/Uuid.h`; dependency
+sources remain unchanged.
+
 Undertow jars have SHA-256 hashes verified against the
 official Maven artifacts. Node's native `deasync` dependency uses
 `app/package-lock.json`. Builds create a local Haxelib repository in a temporary
@@ -193,8 +209,9 @@ hashes and are transferred as tar archives to preserve executable modes.
 
 Use Python 3.12+, Haxe **4.3.7**, Git, the selected runtimes and wrk 4.2.0 on a
 POSIX host. Node builds use Node 22.13.0 and npm; JVM runs require Java 21+.
-C++ builds require a C++ compiler; `bench fetch` downloads the locked hxcpp
-runtime and `bench build` prepares its tools automatically.
+C++ builds require a C++ compiler, and the libuv case also requires CMake.
+`bench fetch` downloads the locked libhxcpp and libuv sources; `bench build`
+prepares the runtime tools and static libuv library automatically.
 
 ```sh
 haxelib install haxe-concurrent 5.1.5
@@ -217,7 +234,8 @@ python3 -m bench run --cases jvm-socket,jvm-crossbyte \
 # Native C++ comparison, including the Crossbyte driver:
 python3 -m bench build --case cpp-socket --haxe /path/to/haxe-4.3.7/haxe
 python3 -m bench build --case cpp-crossbyte --haxe /path/to/haxe-4.3.7/haxe
-python3 -m bench run --cases cpp-socket,cpp-crossbyte \
+python3 -m bench build --case cpp-crossbyte-libuv --haxe /path/to/haxe-4.3.7/haxe
+python3 -m bench run --cases cpp-socket,cpp-crossbyte,cpp-crossbyte-libuv \
   --profile ci --wrk "$PWD/dependencies/wrk/wrk" --out out/local-cpp
 ```
 

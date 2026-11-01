@@ -133,6 +133,33 @@ def verify_bundle(bundle, case):
     return metadata
 
 
+def validate_health(health, case, workers, token, metadata):
+    if health.get("run_id") != token or health.get("case_id") != case["id"]:
+        raise RuntimeError("Port belongs to a different process/build; refusing to benchmark it")
+    if health.get("target") != case["target"] or health.get("driver") != case["driver"] or health.get("workers") != workers:
+        raise RuntimeError("Server identity/settings do not match the benchmark")
+    expected_virtual = case["target"] == "jvm" and case["driver"] == "crossbyte"
+    if health.get("virtual_thread") is not expected_virtual:
+        raise RuntimeError("Unexpected request thread dispatch mode")
+    if case["target"] == "cpp":
+        version = metadata.get("libraries", {}).get("libhxcpp")
+        if not version or health.get("cpp_runtime") != "libhxcpp" or health.get("cpp_runtime_version") != version:
+            raise RuntimeError("C++ benchmark did not use the pinned libhxcpp runtime")
+    if "poll_backend" in case and health.get("poll_backend") != case["poll_backend"]:
+        raise RuntimeError("Poll backend mismatch or fallback; refusing to score this run")
+    if case.get("poll_backend") == "libuv":
+        version = metadata.get("native_libraries", {}).get("libuv", {}).get("version")
+        if not version or health.get("libuv_version") != version:
+            raise RuntimeError("Native libuv version does not match the build")
+
+
+def check_health(port, case, workers, token, metadata):
+    data, _ = request(port, "/health")
+    health = json.loads(data)
+    validate_health(health, case, workers, token, metadata)
+    return health
+
+
 @contextlib.contextmanager
 def server(bundle, case, workers, capacity, cpus, log_path):
     metadata = verify_bundle(bundle, case)
@@ -152,15 +179,7 @@ def server(bundle, case, workers, capacity, cpus, log_path):
                 if process.poll() is not None:
                     raise RuntimeError(f"Server exited with {process.returncode}; see {log_path}")
                 try:
-                    data, _ = request(port, "/health")
-                    health = json.loads(data)
-                    if health["run_id"] != token or health["case_id"] != case["id"]:
-                        raise RuntimeError("Port belongs to a different process/build; refusing to benchmark it")
-                    if health["target"] != case["target"] or health["driver"] != case["driver"] or health["workers"] != workers:
-                        raise RuntimeError("Server identity/settings do not match the benchmark")
-                    expected_virtual = case["target"] == "jvm" and case["driver"] == "crossbyte"
-                    if health["virtual_thread"] is not expected_virtual:
-                        raise RuntimeError("Unexpected request thread dispatch mode")
+                    health = check_health(port, case, workers, token, metadata)
                     break
                 except (OSError, ValueError, http.client.HTTPException) as error:
                     last_error = str(error)
@@ -276,6 +295,7 @@ def run(config, lock, cases, bundles, output, profile_name, wrk, seed=1337, pin=
                             trial = {"case_id": case["id"], "workload": workload["id"], "connections": connections,
                                      "repetition": repetition + 1, "valid": False, "health": health}
                             try:
+                                trial["health"] = check_health(port, case, workers, health["run_id"], metadata)
                                 trial["preflight"] = preflight(port, workload)
                                 warmup = load(wrk, process, port, workload, connections, threads, profile["warmup_seconds"], cpu["client"], logdir / f"{label}-warmup.log")
                                 if any(warmup["wrk"]["errors"].values()):
@@ -286,6 +306,7 @@ def run(config, lock, cases, bundles, output, profile_name, wrk, seed=1337, pin=
                                 if trial["server"].get("process_tree_changed"):
                                     raise ValueError("Server process group changed during measurement")
                                 preflight(port, workload)
+                                trial["health_after"] = check_health(port, case, workers, health["run_id"], metadata)
                                 trial["valid"] = True
                                 print(f"OK {case['id']} {label} r{repetition + 1}: {trial['rps']:.1f} req/s", flush=True)
                             except (OSError, ValueError, RuntimeError, TimeoutError, http.client.HTTPException) as error:

@@ -17,13 +17,21 @@
       "url": "https://github.com/Dimensionscape/Emitter.git",
       "revision": "06b396f584271e24a7dc18dcfadfd020c567cc6a"
     },
-    "hxcpp": {
-      "url": "https://github.com/dimensionscape/hxcpp.git",
-      "revision": "308afd7a20b143338598d084bf2345d1349a22c8"
-    },
     "wrk": {
       "url": "https://github.com/wg/wrk.git",
       "revision": "a211dd5a7050b1f9e8a9870b95513060e72ac4a0"
+    },
+    "libhxcpp": {
+      "url": "https://github.com/openfl/libhxcpp.git",
+      "revision": "04f436bc68c0f6f119ca1863c12974693ae8bcc7"
+    },
+    "crossbyte-libuv": {
+      "url": "https://github.com/DimensionscapeOrg/crossbyte-libuv.git",
+      "revision": "49344cefa751569a20a56e530a793fab958da2fa"
+    },
+    "libuv": {
+      "url": "https://github.com/libuv/libuv.git",
+      "revision": "5152db2cbfeb5582e9c27c5ea1dba2cd9e10759b"
     }
   },
   "haxelib": {

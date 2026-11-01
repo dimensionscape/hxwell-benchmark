@@ -9,7 +9,8 @@
     {"id": "neko-crossbyte", "target": "neko", "driver": "crossbyte", "dispatch": "worker pool + I/O runtimes"},
     {"id": "js-nodehttp", "target": "js", "driver": "nodehttp", "dispatch": "Node cluster workers"},
     {"id": "cpp-socket", "target": "cpp", "driver": "socket", "dispatch": "platform-thread pool"},
-    {"id": "cpp-crossbyte", "target": "cpp", "driver": "crossbyte", "dispatch": "worker pool + I/O runtimes"}
+    {"id": "cpp-crossbyte", "target": "cpp", "driver": "crossbyte", "poll_backend": "builtin", "dispatch": "worker pool + I/O runtimes"},
+    {"id": "cpp-crossbyte-libuv", "target": "cpp", "driver": "crossbyte", "poll_backend": "libuv", "dispatch": "worker pool + libuv I/O runtimes"}
   ],
   "workloads": [
     {"id": "plaintext", "path": "/plaintext", "method": "GET", "expected_text": "Hello, World!\n", "content_type": "text/plain"},

@@ -17,6 +17,8 @@ class BenchmarkProvider extends AbstractProvider {
         Route.get("/health", req -> (new JsonResponse({
             run_id:Settings.runId, case_id:Settings.caseId, driver:Settings.driver,
             target:Settings.target, workers:Settings.workers,
+            cpp_runtime:Settings.cppRuntime, cpp_runtime_version:Settings.cppRuntimeVersion,
+            poll_backend:benchapp.BackendProbe.inspect(req), libuv_version:benchapp.BackendProbe.libuvVersion(),
             virtual_thread:#if jvm jvm.thread.VirtualThread.VirtualThreadExtern.currentThread().isVirtual() #else false #end
         }) : AbstractResponse));
         Route.get("/plaintext", _ -> persistent(new StringResponse("Hello, World!\n").header("Content-Type", "text/plain")));

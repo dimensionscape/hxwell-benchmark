@@ -24,6 +24,12 @@ def sha256(path):
     return digest.hexdigest()
 
 
+def verify_repository(path, spec):
+    actual = capture(["git", "rev-parse", "HEAD"], cwd=path)
+    if actual != spec["revision"] or capture(["git", "status", "--porcelain"], cwd=path):
+        raise ValueError(f"{path} is not a clean checkout of {spec['revision']}; use a fresh dependencies directory")
+
+
 def fetch_repository(path, spec):
     path = Path(path)
     if not path.exists():
@@ -31,9 +37,7 @@ def fetch_repository(path, spec):
         command(["git", "remote", "add", "origin", spec["url"]], cwd=path)
         command(["git", "fetch", "--depth", "1", "origin", spec["revision"]], cwd=path)
         command(["git", "checkout", "--quiet", "--detach", "FETCH_HEAD"], cwd=path)
-    actual = capture(["git", "rev-parse", "HEAD"], cwd=path)
-    if actual != spec["revision"] or capture(["git", "status", "--porcelain"], cwd=path):
-        raise ValueError(f"{path} is not a clean checkout of {spec['revision']}; use a fresh dependencies directory")
+    verify_repository(path, spec)
 
 
 def download(path, url, expected_sha256):
@@ -93,28 +97,32 @@ def local_haxelib(work, deps, lock, case):
     libraries = {name: library_path(name, lock["haxelib"][name]) for name in names}
     repositories = ["hxwell"]
     if case["target"] == "cpp":
-        repositories += ["hxcpp"]
+        repositories += ["libhxcpp"]
     if case["driver"] == "crossbyte":
         repositories += ["hxwell-crossbyte", "crossbyte", "emitter"]
+    if case.get("poll_backend") == "libuv":
+        repositories += ["crossbyte-libuv"]
     for name in repositories:
         if lock["repositories"][name].get("vendored"):
             from .vendor import verify_snapshot
             libraries[name] = verify_snapshot(lock["repositories"][name])
             continue
         path = deps / name
-        if capture(["git", "rev-parse", "HEAD"], cwd=path) != lock["repositories"][name]["revision"]:
-            raise ValueError(f"Wrong dependency revision: {name}")
-        if capture(["git", "status", "--porcelain"], cwd=path):
-            raise ValueError(f"Dirty dependency: {name}")
-        if name == "hxcpp":
+        verify_repository(path, lock["repositories"][name])
+        if name == "libhxcpp":
             # Bootstrapping replaces the tracked run.n. Keep the immutable
             # checkout pristine and isolate compiler output between builds.
-            runtime = work / "toolchain/hxcpp"
+            runtime = work / "toolchain/libhxcpp"
             shutil.copytree(path, runtime, ignore=shutil.ignore_patterns(".git", "hxcpp.n", "obj", "__pch"))
             path = runtime
         libraries[name] = path
     command(["haxelib", "newrepo"], cwd=work, stdout=subprocess.DEVNULL)
-    for name, path in libraries.items():
+    registrations = dict(libraries)
+    if case["target"] == "cpp":
+        # Haxe invokes the runtime by the compatibility name hxcpp. Both
+        # names resolve to this build's same pinned OpenFL libhxcpp copy.
+        registrations["hxcpp"] = libraries["libhxcpp"]
+    for name, path in registrations.items():
         folder = work / ".haxelib" / name
         folder.mkdir(parents=True)
         version = json.loads((path / "haxelib.json").read_text())["version"]
