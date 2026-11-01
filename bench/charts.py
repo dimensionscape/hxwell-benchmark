@@ -151,7 +151,8 @@ def render(value, output, preview=False):
                 ax.set_title(f"{workload.upper()} · {connections} connections", loc="left", fontsize=10, fontweight="bold", pad=10)
                 ax.set_yticks(range(len(cases)), cases if column == 0 else [""] * len(cases))
                 ax.tick_params(axis="y", length=0, labelsize=9)
-                ax.invert_yaxis()
+                # Reserve the same row padding when no bars can be drawn.
+                ax.set_ylim(len(cases) - 0.4, -0.6)
                 ax.set_axisbelow(True)
                 ax.grid(axis="x", color="#e2e8f0", linewidth=0.7)
                 numbers = []
