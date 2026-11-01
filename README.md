@@ -8,16 +8,16 @@ set of claimed performance numbers.
 <!-- benchmark-charts:start -->
 ## Latest benchmark charts
 
-**Complete** · [Run #1 (attempt 1)](https://github.com/hxwell/hxwell-benchmark/actions/runs/41268866888) · profile `ci` · 63/63 valid trials.
-Source: [`e719ecc`](https://github.com/hxwell/hxwell-benchmark/commit/e719ecc615d39754771532661036e842bca9f149). Finished: `2026-11-01T03:35:07.645266+00:00`.
+**Complete** · [Run #3 (attempt 1)](https://github.com/hxwell/hxwell-benchmark/actions/runs/41271257817) · profile `ci` · 63/63 valid trials.
+Source: [`335dff1`](https://github.com/hxwell/hxwell-benchmark/commit/335dff16ee6e89c743df52723267a115efcb9913). Finished: `2026-11-01T04:13:10.357265+00:00`.
 
 All selected measurements passed.
 
-![Requests per second](docs/benchmarks/latest/throughput.svg?run=41268866888-1)
+![Requests per second](docs/benchmarks/latest/throughput.svg?run=41271257817-1)
 
-![p99 response latency](docs/benchmarks/latest/latency.svg?run=41268866888-1)
+![p99 response latency](docs/benchmarks/latest/latency.svg?run=41271257817-1)
 
-![Peak server memory](docs/benchmarks/latest/memory.svg?run=41268866888-1)
+![Peak server memory](docs/benchmarks/latest/memory.svg?run=41271257817-1)
 
 [Chart data and provenance](docs/benchmarks/latest/manifest.json) · Full raw results are in the linked run's `benchmark-results` artifact.
 Only the selected cases and connection levels from this run are shown; older runs are not mixed into these charts.
