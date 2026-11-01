@@ -6,12 +6,12 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from bench.charts import ASSET_NAMES, ASSET_PATH, START, END, dashboard, render, replace_readme, run_metadata
+from bench.charts import ASSET_PATH, START, END, asset_names, chart_views, dashboard, render, replace_readme, run_metadata, target_filename
 from bench.publish import ApiError, newer_than, publish, trusted_environment
 
 
 def config():
-    return {"cases": [{"id": "jvm-socket"}, {"id": "neko-socket"}], "workloads": [{"id": "plaintext"}, {"id": "json"}],
+    return {"cases": [{"id": "jvm-socket", "target": "jvm"}, {"id": "neko-socket", "target": "neko"}], "workloads": [{"id": "plaintext"}, {"id": "json"}],
             "profiles": {"ci": {"warmup_seconds": 1, "duration_seconds": 2, "repetitions": 2, "connections": [16], "performance_run": True},
                          "smoke": {"warmup_seconds": 1, "duration_seconds": 1, "repetitions": 1, "connections": [4], "performance_run": False},
                          "full": {"warmup_seconds": 1, "duration_seconds": 2, "repetitions": 2, "connections": [16, 64], "performance_run": True}}}
@@ -98,7 +98,11 @@ class ChartTests(unittest.TestCase):
         changed = replace_readme(text, value())
         self.assertTrue(changed.startswith("Human intro\n"))
         self.assertTrue(changed.endswith("\nHuman ending\n"))
-        self.assertIn("throughput.svg?run=102-1", changed)
+        self.assertIn("summary.svg?run=102-1", changed)
+        self.assertLess(changed.index("## Summary"), changed.index("## JVM"))
+        self.assertLess(changed.index("## JVM"), changed.index("## Neko"))
+        self.assertIn("target-jvm.svg?run=102-1", changed)
+        self.assertIn("target-neko.svg?run=102-1", changed)
         self.assertEqual(1, changed.count(START))
         self.assertEqual(changed, replace_readme(changed, value()))
         for invalid in ("no markers", START + START + END, END + START):
@@ -110,15 +114,49 @@ class ChartTests(unittest.TestCase):
             root = Path(directory)
             render(value(), root / "one")
             render(value(), root / "two")
-            for filename in ASSET_NAMES:
+            for filename in asset_names(value()):
                 self.assertEqual((root / "one" / filename).read_bytes(), (root / "two" / filename).read_bytes())
                 if filename.endswith(".svg"):
                     ET.parse(root / "one" / filename)
             render(value("smoke"), root / "smoke")
-            text = (root / "smoke/throughput.svg").read_text()
+            text = (root / "smoke/summary.svg").read_text()
             self.assertIn("SMOKE ONLY", text)
             self.assertIn("NOT A PERFORMANCE RUN", text)
             self.assertNotIn(">150<", text)
+
+    def test_target_views_group_configured_targets_and_reject_unsafe_names(self):
+        cfg = config()
+        # Group by explicit configuration, not a guessed case-ID prefix.
+        cfg["cases"][1]["target"] = "jvm"
+        data = dashboard(report(), cfg, metadata(), "success")
+        views = chart_views(data)
+        self.assertEqual(["summary.svg", "target-jvm.svg"], [v["filename"] for v in views])
+        self.assertEqual(["jvm-socket", "neko-socket"], views[1]["cases"])
+        for name in ("../README", "jvm/other", "", "a.svg", "x\\n"):
+            with self.assertRaises(ValueError):
+                target_filename(name)
+
+    def test_target_svgs_contain_only_their_cases_and_all_metrics(self):
+        with tempfile.TemporaryDirectory() as directory:
+            render(value(), directory)
+            for target, other in (("jvm", "neko"), ("neko", "jvm")):
+                text = (Path(directory) / f"target-{target}.svg").read_text()
+                self.assertIn(f"{target}-socket", text)
+                self.assertNotIn(f"{other}-socket", text)
+                for label in ("RPS", "p99", "RSS", "PLAINTEXT", "JSON"):
+                    self.assertIn(label, text)
+
+    def test_subset_replaces_previous_target_charts_without_removing_unrelated_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            render(value(), root)
+            (root / "notes.txt").write_text("human notes")
+            (root / "throughput.svg").write_text("legacy plot")
+            subset = dashboard(report(selection=["jvm-socket"]), config(), metadata(), "success", selection="jvm-socket")
+            render(subset, root)
+            self.assertEqual({"summary.svg", "target-jvm.svg", "manifest.json", "notes.txt"}, {p.name for p in root.iterdir()})
+            self.assertNotIn("## Neko", replace_readme(START + END, subset))
+            self.assertEqual("human notes", (root / "notes.txt").read_text())
 
     def test_unavailable_memory_is_not_zero(self):
         source = report()
@@ -129,9 +167,10 @@ class ChartTests(unittest.TestCase):
 
 
 class FakeApi:
-    def __init__(self, previous=None, conflict=False):
+    def __init__(self, previous=None, conflict=False, existing=()):
         self.previous = previous
         self.conflict = conflict
+        self.existing = existing
         self.calls = []
         self.head = "head-a"
         self.readmes = {"head-a": "Before\n" + START + "\nold\n" + END + "\nAfter\n",
@@ -142,6 +181,8 @@ class FakeApi:
         if method == "GET" and path.endswith("git/ref/heads/main"):
             return {"object": {"sha": self.head}}
         if method == "GET" and "/contents/" in path:
+            if f"/contents/{ASSET_PATH}?" in path:
+                return [{"name": name, "type": "file"} for name in self.existing]
             revision = path.split("?ref=")[1]
             if "README.md" in path:
                 text = self.readmes[revision]
@@ -164,8 +205,8 @@ class FakeApi:
 
 
 class PublishTests(unittest.TestCase):
-    def assets(self, directory):
-        for name in ASSET_NAMES:
+    def assets(self, directory, data=None):
+        for name in asset_names(data or value()):
             (Path(directory) / name).write_text("generated")
 
     def test_only_trusted_main_jobs_are_allowed(self):
@@ -196,7 +237,18 @@ class PublishTests(unittest.TestCase):
             result = publish(api, value(), directory)
         self.assertEqual("published", result["status"])
         tree = next(payload for method, path, payload in api.calls if method == "POST" and path.endswith("/git/trees"))
-        self.assertEqual({"README.md"} | {f"{ASSET_PATH}/{name}" for name in ASSET_NAMES}, {entry["path"] for entry in tree["tree"]})
+        self.assertEqual({"README.md"} | {f"{ASSET_PATH}/{name}" for name in asset_names(value())}, {entry["path"] for entry in tree["tree"]})
+
+    def test_publication_removes_only_existing_obsolete_generated_charts(self):
+        subset = dashboard(report(selection=["jvm-socket"]), config(), metadata(), "success", selection="jvm-socket")
+        api = FakeApi(existing=("summary.svg", "target-jvm.svg", "target-neko.svg", "throughput.svg", "notes.svg", "manifest.json"))
+        with tempfile.TemporaryDirectory() as directory:
+            self.assets(directory, subset)
+            publish(api, subset, directory)
+        tree = next(payload for method, path, payload in api.calls if method == "POST" and path.endswith("/git/trees"))
+        removed = {entry["path"] for entry in tree["tree"] if entry.get("sha", "present") is None}
+        self.assertEqual({f"{ASSET_PATH}/target-neko.svg", f"{ASSET_PATH}/throughput.svg"}, removed)
+        self.assertFalse(any(entry["path"].endswith("notes.svg") for entry in tree["tree"]))
 
     def test_non_fast_forward_retry_preserves_concurrent_readme_edit(self):
         api = FakeApi(conflict=True)

@@ -1,28 +1,42 @@
 # HxWell target/driver benchmarks
 
-CI benchmarks for the same HxWell application across supported compiler targets
-and HTTP drivers. The suite builds release applications, checks their responses,
-then measures them with a pinned `wrk` client. This is a benchmark harness, not a
-set of claimed performance numbers.
-
 <!-- benchmark-charts:start -->
-## Latest benchmark charts
+## Summary
 
 **Complete** · [Run #3 (attempt 1)](https://github.com/hxwell/hxwell-benchmark/actions/runs/41271257817) · profile `ci` · 63/63 valid trials.
 Source: [`335dff1`](https://github.com/hxwell/hxwell-benchmark/commit/335dff16ee6e89c743df52723267a115efcb9913). Finished: `2026-11-01T04:13:10.357265+00:00`.
 
 All selected measurements passed.
 
-![Requests per second](docs/benchmarks/latest/throughput.svg?run=41271257817-1)
+![Summary: all targets, throughput, p99 latency and memory](docs/benchmarks/latest/summary.svg?run=41271257817-1)
 
-![p99 response latency](docs/benchmarks/latest/latency.svg?run=41271257817-1)
+Each chart shows throughput, p99 latency and peak RSS for plaintext, JSON and echo. Summary and target charts use matching scales and colors; workloads and connection levels remain separate.
 
-![Peak server memory](docs/benchmarks/latest/memory.svg?run=41271257817-1)
+## JVM
+
+![JVM benchmark results](docs/benchmarks/latest/target-jvm.svg?run=41271257817-1)
+
+## Neko
+
+![Neko benchmark results](docs/benchmarks/latest/target-neko.svg?run=41271257817-1)
+
+## JavaScript / Node
+
+![JavaScript / Node benchmark results](docs/benchmarks/latest/target-js.svg?run=41271257817-1)
+
+## C++ / hxcpp
+
+![C++ / hxcpp benchmark results](docs/benchmarks/latest/target-cpp.svg?run=41271257817-1)
 
 [Chart data and provenance](docs/benchmarks/latest/manifest.json) · Full raw results are in the linked run's `benchmark-results` artifact.
-Only the selected cases and connection levels from this run are shown; older runs are not mixed into these charts.
+Only the selected targets, cases and connection levels from this run are shown; older runs are not mixed into these charts.
 
 <!-- benchmark-charts:end -->
+
+CI benchmarks for the same HxWell application across supported compiler targets
+and HTTP drivers. The suite builds release applications, checks their responses,
+then measures them with a pinned `wrk` client. This is a benchmark harness, not a
+set of claimed performance numbers.
 
 ## Included cases
 
@@ -57,7 +71,10 @@ requests, and manual dispatch:
    Thus the comparison is not assembled from differently loaded matrix runners.
 4. Warm up each workload, measure repeated trials, and preserve raw results plus
    a JSON/CSV/Markdown summary in the `benchmark-results` artifact and job summary.
-5. Generate throughput, p99 latency and RSS SVG charts. A separate publishing job
+5. Generate one combined summary SVG, followed by separate JVM, Neko,
+   JavaScript/Node and C++ charts for the selected targets. Each chart includes
+   throughput, p99 latency and peak RSS, with separate workload/connection panels
+   and matching scales and case colors across views. A separate publishing job
    updates the managed README section and `docs/benchmarks/latest/` for each
    completed `main` push or manual run, including unsuccessful runs.
 
@@ -69,8 +86,9 @@ PR/other-branch runs produce chart artifacts without changing `main`; cancelled
 runs do not replace the snapshot. Older runs/retries cannot overwrite newer ones.
 
 Only the publishing job has `contents: write`. It regenerates plots from validated
-raw data, updates five allowlisted files, and uses a non-forced, fast-forward Git
-reference update. On a concurrent edit it rereads the latest README and preserves
+raw data and updates only the README, generated SVGs and manifest. Obsolete target
+charts are removed when a run selects fewer targets; unrelated files are preserved.
+The publisher uses a non-forced, fast-forward Git reference update. On a concurrent edit it rereads the latest README and preserves
 text outside the chart markers. Its `GITHUB_TOKEN` commit does not start another
 benchmark; generated README/chart paths are also excluded from push triggers.
 

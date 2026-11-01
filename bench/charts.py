@@ -13,13 +13,34 @@ from .config import load_config, select_cases
 START = "<!-- benchmark-charts:start -->"
 END = "<!-- benchmark-charts:end -->"
 ASSET_PATH = "docs/benchmarks/latest"
-ASSET_NAMES = ("throughput.svg", "latency.svg", "memory.svg", "manifest.json")
 METRICS = (
-    ("throughput.svg", "rps_median", "Requests per second", "requests / second · higher is better"),
-    ("latency.svg", "p99_ms_median", "p99 response latency", "milliseconds · lower is better"),
-    ("memory.svg", "peak_group_rss_mib", "Peak server memory", "sampled process-group RSS · MiB"),
+    ("rps_median", "RPS", "requests / second · higher is better"),
+    ("p99_ms_median", "p99", "p99 latency · milliseconds · lower is better"),
+    ("peak_group_rss_mib", "RSS", "peak process-group RSS · MiB"),
 )
 COLORS = ("#2563eb", "#7c3aed", "#0891b2", "#d97706", "#be185d", "#059669", "#475569")
+TARGET_LABELS = {"jvm": "JVM", "neko": "Neko", "js": "JavaScript / Node", "cpp": "C++ / hxcpp"}
+
+
+def target_filename(target):
+    if not isinstance(target, str) or not re.fullmatch(r"[a-z][a-z0-9-]*", target):
+        raise ValueError("Target must be a safe chart filename component")
+    return f"target-{target}.svg"
+
+
+def is_managed_chart(name):
+    return name in ("summary.svg", "throughput.svg", "latency.svg", "memory.svg") or bool(
+        re.fullmatch(r"target-[a-z][a-z0-9-]*\.svg", name))
+
+
+def chart_views(value):
+    return [{"filename": "summary.svg", "title": "Summary · all selected targets", "cases": value["cases"]}] + [
+        {"filename": target_filename(group["id"]), "title": TARGET_LABELS.get(group["id"], group["id"].upper()),
+         "cases": group["cases"]} for group in value["targets"]]
+
+
+def asset_names(value):
+    return tuple(view["filename"] for view in chart_views(value)) + ("manifest.json",)
 
 
 def run_metadata(repository, run_id, run_number, attempt, source_sha):
@@ -59,12 +80,19 @@ def validate_trial(trial):
 
 def dashboard(report, config, run, outcome, profile_name="ci", selection="all"):
     """Recompute groups from raw trials; never trust a stored summary/valid flag alone."""
-    cases = [case["id"] for case in select_cases(config, selection)]
+    selected = select_cases(config, selection)
+    cases = [case["id"] for case in selected]
+    targets = {}
+    for case in selected:
+        target_filename(case["target"])
+        targets.setdefault(case["target"], []).append(case["id"])
     profile = config["profiles"][profile_name]
     workloads = [workload["id"] for workload in config["workloads"]]
     expected = len(cases) * len(workloads) * len(profile["connections"]) * profile["repetitions"]
     value = {"schema_version": 1, "run": run, "outcome": outcome, "profile_name": profile_name, "profile": profile,
-             "cases": cases, "workloads": workloads, "expected_trials": expected, "valid_trials": 0,
+             "cases": cases, "targets": [{"id": target, "cases": names} for target, names in targets.items()],
+             "case_colors": {case["id"]: COLORS[i % len(COLORS)] for i, case in enumerate(config["cases"])},
+             "workloads": workloads, "expected_trials": expected, "valid_trials": 0,
              "finished_at": None, "rows": [], "status": "unavailable", "message": "No benchmark report was produced."}
     if report is not None:
         try:
@@ -128,90 +156,102 @@ def render(value, output, preview=False):
 
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
-    plt.rcParams.update({"font.family": "DejaVu Sans", "svg.fonttype": "none", "svg.hashsalt": "hxwell-benchmark-charts-v1",
+    plt.rcParams.update({"font.family": "DejaVu Sans", "svg.fonttype": "none", "svg.hashsalt": "hxwell-benchmark-charts-v2",
                          "axes.spines.top": False, "axes.spines.right": False, "axes.spines.left": False,
                          "font.size": 9, "axes.edgecolor": "#cbd5e1", "text.color": "#0f172a", "axes.labelcolor": "#334155"})
-    cases, workloads, profile = value["cases"], value["workloads"], value["profile"]
+    workloads, profile = value["workloads"], value["profile"]
     lookup = {(row["case"], row["workload"], row["connections"]): row for row in value["rows"]}
-    heights = max(2.6, len(cases) * 0.4)
     status = {"complete": "COMPLETE", "incomplete": "INCOMPLETE / FAILED", "smoke": "SMOKE · NOT A PERFORMANCE RUN", "unavailable": "NO VALID REPORT"}[value["status"]]
-    warning = value["status"] != "complete"
-    for filename, metric, title, unit in METRICS:
-        fig, axes = plt.subplots(len(profile["connections"]), len(workloads), squeeze=False,
-                                 figsize=(12.8, heights * len(profile["connections"]) + 1.65), facecolor="#f8fafc")
-        fig.suptitle(title, fontsize=18, fontweight="bold", x=0.02, ha="left", y=0.98).set_in_layout(False)
-        detail = (f"{status}  |  {value['profile_name']}  |  {value['valid_trials']}/{value['expected_trials']} valid trials  |  "
+
+    def scored(entry, metric):
+        return entry.get("valid") and profile["performance_run"] and finite(entry.get(metric))
+
+    for view in chart_views(value):
+        cases = view["cases"]
+        rows = len(METRICS) * len(profile["connections"])
+        height = max(1.25, len(cases) * 0.32 + 0.65) * rows + 1.85
+        fig, axes = plt.subplots(rows, len(workloads), squeeze=False, figsize=(12.8, height), facecolor="#f8fafc")
+        fig.suptitle(view["title"], fontsize=18, fontweight="bold", x=0.02, ha="left", y=1 - 0.12 / height).set_in_layout(False)
+        valid = sum(row["samples"] for row in value["rows"] if row["case"] in cases and row["valid"])
+        expected = len(cases) * len(workloads) * len(profile["connections"]) * profile["repetitions"]
+        detail = (f"{status}  |  {value['profile_name']}  |  {valid}/{expected} valid trials  |  "
                   f"{profile['repetitions']} repeats × {profile['duration_seconds']} s")
-        fig.text(0.02, 0.90 if len(profile["connections"]) == 1 else 0.93, detail, fontsize=10,
-                 color="#b45309" if warning else "#475569")
-        for row_index, connections in enumerate(profile["connections"]):
-            for column, workload in enumerate(workloads):
-                ax = axes[row_index][column]
-                ax.set_facecolor("white")
-                ax.set_title(f"{workload.upper()} · {connections} connections", loc="left", fontsize=10, fontweight="bold", pad=10)
-                ax.set_yticks(range(len(cases)), cases if column == 0 else [""] * len(cases))
-                ax.tick_params(axis="y", length=0, labelsize=9)
-                # Reserve the same row padding when no bars can be drawn.
-                ax.set_ylim(len(cases) - 0.4, -0.6)
-                ax.set_axisbelow(True)
-                ax.grid(axis="x", color="#e2e8f0", linewidth=0.7)
-                numbers = []
-                for index, case in enumerate(cases):
-                    entry = lookup.get((case, workload, connections), {})
-                    number = entry.get(metric)
-                    if entry.get("valid") and profile["performance_run"] and finite(number):
-                        numbers.append(number)
-                        ax.barh(index, number, height=0.63, color=COLORS[index % len(COLORS)])
-                        if metric == "rps_median":
-                            ax.errorbar(number, index, xerr=[[number - entry["rps_min"]], [entry["rps_max"] - number]],
-                                        fmt="none", ecolor="#334155", capsize=2, linewidth=0.9)
-                            numbers.append(entry["rps_max"])
-                        label = f"{number:,.0f}" if metric == "rps_median" else f"{number:,.2f}"
-                        if entry.get("client_saturated"):
-                            label += " *"
-                        label_at = entry["rps_max"] if metric == "rps_median" else number
-                        ax.annotate(label, (label_at, index), xytext=(5, 0), textcoords="offset points", va="center", fontsize=8)
+        fig.text(0.02, 1 - 0.46 / height, detail, fontsize=10,
+                 color="#475569" if value["status"] == "complete" else "#b45309")
+        for connection_index, connections in enumerate(profile["connections"]):
+            for metric_index, (metric, short, unit) in enumerate(METRICS):
+                for column, workload in enumerate(workloads):
+                    ax = axes[connection_index * len(METRICS) + metric_index][column]
+                    ax.set_facecolor("white")
+                    ax.set_title(f"{workload.upper()} · {short} · {connections} connections", loc="left", fontsize=10, fontweight="bold", pad=9)
+                    ax.set_yticks(range(len(cases)), cases if column == 0 else [""] * len(cases))
+                    ax.tick_params(axis="y", length=0, labelsize=9)
+                    ax.set_ylim(len(cases) - 0.4, -0.6)
+                    ax.set_axisbelow(True)
+                    ax.grid(axis="x", color="#e2e8f0", linewidth=0.7)
+                    # Keep the same metric/workload scale and case color in the
+                    # summary and every target, even when a target has one driver.
+                    scale_metric = "rps_max" if metric == "rps_median" else metric
+                    numbers = [entry[scale_metric] for case in value["cases"]
+                               if scored(entry := lookup.get((case, workload, connections), {}), metric)]
+                    for index, case in enumerate(cases):
+                        entry = lookup.get((case, workload, connections), {})
+                        number = entry.get(metric)
+                        if scored(entry, metric):
+                            ax.barh(index, number, height=0.63, color=value["case_colors"][case])
+                            if metric == "rps_median":
+                                ax.errorbar(number, index, xerr=[[number - entry["rps_min"]], [entry["rps_max"] - number]],
+                                            fmt="none", ecolor="#334155", capsize=2, linewidth=0.9)
+                            label = f"{number:,.0f}" if metric == "rps_median" else f"{number:,.2f}"
+                            if entry.get("client_saturated"):
+                                label += " *"
+                            label_at = entry["rps_max"] if metric == "rps_median" else number
+                            ax.annotate(label, (label_at, index), xytext=(5, 0), textcoords="offset points", va="center", fontsize=8)
+                        else:
+                            label = "SMOKE ONLY" if not profile["performance_run"] else ("N/A" if entry.get("valid") else "INVALID / MISSING")
+                            ax.text(0.02, index, label, transform=ax.get_yaxis_transform(), va="center", fontsize=8, color="#92400e")
+                    maximum = max(numbers, default=0)
+                    ax.set_xlim(0, maximum * 1.32 if maximum else 1)
+                    if not numbers:
+                        ax.set_xticks([])
                     else:
-                        label = "SMOKE ONLY" if not profile["performance_run"] else ("N/A" if entry.get("valid") else "INVALID / MISSING")
-                        ax.text(0.02, index, label, transform=ax.get_yaxis_transform(), va="center", fontsize=8, color="#92400e")
-                maximum = max(numbers, default=0)
-                ax.set_xlim(0, maximum * 1.32 if maximum else 1)
-                if not numbers:
-                    ax.set_xticks([])
-                else:
-                    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:,.0f}" if x >= 100 else f"{x:g}"))
-                ax.set_xlabel(unit if profile["performance_run"] else "Validation result only", fontsize=8)
-        fig.tight_layout(rect=(0.015, 0.075, 0.995, 0.86 if len(profile["connections"]) == 1 else 0.90), w_pad=2.4, h_pad=2)
-        note = {
-            "rps_median": "Bars: median requests/second across repetitions. Whiskers: minimum to maximum across repetitions.",
-            "p99_ms_median": "Bars: median of per-trial p99 values across repetitions; this is not a pooled latency percentile.",
-            "peak_group_rss_mib": "Bars: maximum sampled process-group RSS across repetitions. Shared pages may be counted more than once.",
-        }[metric]
-        fig.text(0.02, 0.045, note, fontsize=8, color="#475569")
-        fig.text(0.02, 0.015, f"Run #{value['run']['number']}.{value['run']['attempt']} · {value['run']['source_sha'][:7]} · "
-                 f"{value['finished_at'] or 'report unavailable'} · * client possibly saturated", fontsize=8, color="#64748b")
+                        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:,.0f}" if x >= 100 else f"{x:g}"))
+                    ax.set_xlabel(unit if profile["performance_run"] else "Validation result only", fontsize=8)
+        fig.tight_layout(rect=(0.015, 0.85 / height, 0.995, 1 - 0.8 / height), w_pad=2.4, h_pad=2.2)
+        fig.text(0.02, 0.57 / height, "RPS: median; whiskers: min–max. p99: median of per-trial percentiles, not a pooled percentile.", fontsize=8, color="#475569")
+        fig.text(0.02, 0.37 / height, "RSS: maximum sampled process-group memory; shared pages may be counted twice. * client possibly saturated", fontsize=8, color="#475569")
+        fig.text(0.02, 0.12 / height, f"Run #{value['run']['number']}.{value['run']['attempt']} · {value['run']['source_sha'][:7]} · "
+                 f"{value['finished_at'] or 'report unavailable'}", fontsize=8, color="#64748b")
         metadata = {"Date": value["finished_at"] or "", "Creator": "hxwell-benchmark"}
-        fig.savefig(output / filename, format="svg", metadata=metadata)
+        fig.savefig(output / view["filename"], format="svg", metadata=metadata)
         if preview:
-            fig.savefig(output / filename.replace(".svg", ".png"), dpi=140)
+            fig.savefig(output / view["filename"].replace(".svg", ".png"), dpi=140)
         plt.close(fig)
     (output / "manifest.json").write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+    # A later subset run must not leave an older target's chart in this snapshot.
+    current = set(asset_names(value))
+    for path in output.iterdir():
+        if path.is_file() and is_managed_chart(path.name) and path.name not in current:
+            path.unlink()
 
 
 def readme_block(value):
     run = value["run"]
     status = {"complete": "Complete", "incomplete": "Incomplete / failed", "smoke": "Smoke validation only", "unavailable": "No valid report"}[value["status"]]
     key = f"{run['id']}-{run['attempt']}"
-    lines = [START, "## Latest benchmark charts", "",
+    lines = [START, "## Summary", "",
              f"**{status}** · [Run #{run['number']} (attempt {run['attempt']})]({run['url']}) · "
              f"profile `{value['profile_name']}` · {value['valid_trials']}/{value['expected_trials']} valid trials.",
              f"Source: [`{run['source_sha'][:7]}`](https://github.com/{run['repository']}/commit/{run['source_sha']}). "
              f"Finished: `{value['finished_at'] or 'not available'}`.", "", value["message"], "",
-             f"![Requests per second]({ASSET_PATH}/throughput.svg?run={key})", "",
-             f"![p99 response latency]({ASSET_PATH}/latency.svg?run={key})", "",
-             f"![Peak server memory]({ASSET_PATH}/memory.svg?run={key})", "",
-             f"[Chart data and provenance]({ASSET_PATH}/manifest.json) · Full raw results are in the linked run's `benchmark-results` artifact.",
-             "Only the selected cases and connection levels from this run are shown; older runs are not mixed into these charts.", "", END]
+             f"![Summary: all targets, throughput, p99 latency and memory]({ASSET_PATH}/summary.svg?run={key})", "",
+             "Each chart shows throughput, p99 latency and peak RSS for plaintext, JSON and echo. "
+             "Summary and target charts use matching scales and colors; workloads and connection levels remain separate.", ""]
+    for group in value["targets"]:
+        title = TARGET_LABELS.get(group["id"], group["id"].upper())
+        lines.extend([f"## {title}", "", f"![{title} benchmark results]({ASSET_PATH}/{target_filename(group['id'])}?run={key})", ""])
+    lines.extend([f"[Chart data and provenance]({ASSET_PATH}/manifest.json) · Full raw results are in the linked run's `benchmark-results` artifact.",
+                  "Only the selected targets, cases and connection levels from this run are shown; older runs are not mixed into these charts.", "", END])
     return "\n".join(lines)
 
 

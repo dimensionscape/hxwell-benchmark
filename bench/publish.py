@@ -8,7 +8,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from .charts import ASSET_NAMES, ASSET_PATH, arguments, from_arguments, render, replace_readme
+from .charts import ASSET_PATH, arguments, asset_names, from_arguments, is_managed_chart, render, replace_readme
 
 
 class ApiError(RuntimeError):
@@ -62,10 +62,25 @@ def read_file(api, repository, name, revision, optional=False):
     return base64.b64decode(result["content"]).decode("utf-8")
 
 
+def obsolete_charts(api, repository, revision, current):
+    """Delete only existing generated SVGs, leaving unrelated directory files alone."""
+    try:
+        entries = api.request("GET", f"repos/{repository}/contents/{ASSET_PATH}?ref={revision}")
+    except ApiError as error:
+        if error.status == 404:
+            return []
+        raise
+    if not isinstance(entries, list):
+        raise ValueError("Expected the generated chart directory")
+    return sorted(f"{ASSET_PATH}/{entry['name']}" for entry in entries
+                  if entry.get("type") == "file" and is_managed_chart(entry["name"])
+                  and f"{ASSET_PATH}/{entry['name']}" not in current)
+
+
 def publish(api, value, output, attempts=3):
     """Retry only fast-forward races; merge the README against the latest tree."""
     repository = value["run"]["repository"]
-    assets = {f"{ASSET_PATH}/{name}": (Path(output) / name).read_text() for name in ASSET_NAMES}
+    assets = {f"{ASSET_PATH}/{name}": (Path(output) / name).read_text() for name in asset_names(value)}
     for _ in range(attempts):
         head = api.request("GET", f"repos/{repository}/git/ref/heads/main")["object"]["sha"]
         previous_text = read_file(api, repository, f"{ASSET_PATH}/manifest.json", head, optional=True)
@@ -74,10 +89,12 @@ def publish(api, value, output, attempts=3):
             return {"status": "skipped", "reason": "This run/attempt is already published or superseded", "head": head}
         readme = read_file(api, repository, "README.md", head)
         files = {**assets, "README.md": replace_readme(readme, value)}
+        removed = obsolete_charts(api, repository, head, files)
         base = api.request("GET", f"repos/{repository}/git/commits/{head}")["tree"]["sha"]
         tree = api.request("POST", f"repos/{repository}/git/trees", {
             "base_tree": base,
-            "tree": [{"path": name, "mode": "100644", "type": "blob", "content": content} for name, content in files.items()],
+            "tree": [{"path": name, "mode": "100644", "type": "blob", "content": content} for name, content in files.items()]
+                    + [{"path": name, "mode": "100644", "type": "blob", "sha": None} for name in removed],
         })["sha"]
         run = value["run"]
         commit = api.request("POST", f"repos/{repository}/git/commits", {

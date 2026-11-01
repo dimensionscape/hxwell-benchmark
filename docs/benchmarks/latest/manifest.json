@@ -28,6 +28,44 @@
     "js-nodehttp",
     "cpp-socket"
   ],
+  "targets": [
+    {
+      "id": "jvm",
+      "cases": [
+        "jvm-socket",
+        "jvm-undertow",
+        "jvm-crossbyte"
+      ]
+    },
+    {
+      "id": "neko",
+      "cases": [
+        "neko-socket",
+        "neko-crossbyte"
+      ]
+    },
+    {
+      "id": "js",
+      "cases": [
+        "js-nodehttp"
+      ]
+    },
+    {
+      "id": "cpp",
+      "cases": [
+        "cpp-socket"
+      ]
+    }
+  ],
+  "case_colors": {
+    "jvm-socket": "#2563eb",
+    "jvm-undertow": "#7c3aed",
+    "jvm-crossbyte": "#0891b2",
+    "neko-socket": "#d97706",
+    "neko-crossbyte": "#be185d",
+    "js-nodehttp": "#059669",
+    "cpp-socket": "#475569"
+  },
   "workloads": [
     "plaintext",
     "json",
