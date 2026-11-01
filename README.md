@@ -8,25 +8,25 @@ Source: [`68a7e6b`](https://github.com/hxwell/hxwell-benchmark/commit/68a7e6b102
 
 All selected measurements passed.
 
-![Summary: all targets, throughput, p99 latency and memory](docs/benchmarks/latest/summary.svg?run=41277599305-1)
+![Summary: all targets, throughput, p99 latency and memory](docs/benchmarks/latest/summary.svg?run=41277599305-1&layout=3)
 
 Each chart shows throughput, p99 latency and peak RSS for plaintext, JSON and echo. Summary and target charts use matching scales and colors; workloads and connection levels remain separate.
 
 ## JVM
 
-![JVM benchmark results](docs/benchmarks/latest/target-jvm.svg?run=41277599305-1)
+![JVM benchmark results](docs/benchmarks/latest/target-jvm.svg?run=41277599305-1&layout=3)
 
 ## Neko
 
-![Neko benchmark results](docs/benchmarks/latest/target-neko.svg?run=41277599305-1)
+![Neko benchmark results](docs/benchmarks/latest/target-neko.svg?run=41277599305-1&layout=3)
 
 ## JavaScript / Node
 
-![JavaScript / Node benchmark results](docs/benchmarks/latest/target-js.svg?run=41277599305-1)
+![JavaScript / Node benchmark results](docs/benchmarks/latest/target-js.svg?run=41277599305-1&layout=3)
 
 ## C++ / libhxcpp
 
-![C++ / libhxcpp benchmark results](docs/benchmarks/latest/target-cpp.svg?run=41277599305-1)
+![C++ / libhxcpp benchmark results](docs/benchmarks/latest/target-cpp.svg?run=41277599305-1&layout=3)
 
 [Chart data and provenance](docs/benchmarks/latest/manifest.json) · Full raw results are in the linked run's `benchmark-results` artifact.
 Only the selected targets, cases and connection levels from this run are shown; older runs are not mixed into these charts.

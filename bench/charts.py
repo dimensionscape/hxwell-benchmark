@@ -13,6 +13,7 @@ from .config import load_config, select_cases
 START = "<!-- benchmark-charts:start -->"
 END = "<!-- benchmark-charts:end -->"
 ASSET_PATH = "docs/benchmarks/latest"
+CHART_LAYOUT = 3
 METRICS = (
     ("rps_median", "RPS", "requests / second · higher is better"),
     ("p99_ms_median", "p99", "p99 latency · milliseconds · lower is better"),
@@ -152,7 +153,7 @@ def render(value, output, preview=False):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.ticker import FuncFormatter
+    from matplotlib.ticker import FuncFormatter, MaxNLocator
 
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
@@ -215,6 +216,7 @@ def render(value, output, preview=False):
                     if not numbers:
                         ax.set_xticks([])
                     else:
+                        ax.xaxis.set_major_locator(MaxNLocator(nbins=4, min_n_ticks=3))
                         ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:,.0f}" if x >= 100 else f"{x:g}"))
                     ax.set_xlabel(unit if profile["performance_run"] else "Validation result only", fontsize=8)
         fig.tight_layout(rect=(0.015, 0.85 / height, 0.995, 1 - 0.8 / height), w_pad=2.4, h_pad=2.2)
@@ -238,7 +240,7 @@ def render(value, output, preview=False):
 def readme_block(value):
     run = value["run"]
     status = {"complete": "Complete", "incomplete": "Incomplete / failed", "smoke": "Smoke validation only", "unavailable": "No valid report"}[value["status"]]
-    key = f"{run['id']}-{run['attempt']}"
+    key = f"{run['id']}-{run['attempt']}&layout={CHART_LAYOUT}"
     lines = [START, "## Summary", "",
              f"**{status}** · [Run #{run['number']} (attempt {run['attempt']})]({run['url']}) · "
              f"profile `{value['profile_name']}` · {value['valid_trials']}/{value['expected_trials']} valid trials.",
