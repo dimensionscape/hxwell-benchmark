@@ -5,6 +5,25 @@ and HTTP drivers. The suite builds release applications, checks their responses,
 then measures them with a pinned `wrk` client. This is a benchmark harness, not a
 set of claimed performance numbers.
 
+<!-- benchmark-charts:start -->
+## Latest benchmark charts
+
+**Complete** · [Run #1 (attempt 1)](https://github.com/hxwell/hxwell-benchmark/actions/runs/41268866888) · profile `ci` · 63/63 valid trials.
+Source: [`e719ecc`](https://github.com/hxwell/hxwell-benchmark/commit/e719ecc615d39754771532661036e842bca9f149). Finished: `2026-11-01T03:35:07.645266+00:00`.
+
+All selected measurements passed.
+
+![Requests per second](docs/benchmarks/latest/throughput.svg?run=41268866888-1)
+
+![p99 response latency](docs/benchmarks/latest/latency.svg?run=41268866888-1)
+
+![Peak server memory](docs/benchmarks/latest/memory.svg?run=41268866888-1)
+
+[Chart data and provenance](docs/benchmarks/latest/manifest.json) · Full raw results are in the linked run's `benchmark-results` artifact.
+Only the selected cases and connection levels from this run are shown; older runs are not mixed into these charts.
+
+<!-- benchmark-charts:end -->
+
 ## Included cases
 
 | Case | Target | Driver | Request execution |
@@ -38,6 +57,22 @@ requests, and manual dispatch:
    Thus the comparison is not assembled from differently loaded matrix runners.
 4. Warm up each workload, measure repeated trials, and preserve raw results plus
    a JSON/CSV/Markdown summary in the `benchmark-results` artifact and job summary.
+5. Generate throughput, p99 latency and RSS SVG charts. A separate publishing job
+   updates the managed README section and `docs/benchmarks/latest/` for each
+   completed `main` push or manual run, including unsuccessful runs.
+
+The latest run replaces the chart snapshot; selected subsets and connection
+levels are labeled and never merged with older measurements. Invalid/missing
+groups have no bar, and smoke runs show validation status rather than performance
+scores. A run link, source commit and UTC completion timestamp accompany the plots.
+PR/other-branch runs produce chart artifacts without changing `main`; cancelled
+runs do not replace the snapshot. Older runs/retries cannot overwrite newer ones.
+
+Only the publishing job has `contents: write`. It regenerates plots from validated
+raw data, updates five allowlisted files, and uses a non-forced, fast-forward Git
+reference update. On a concurrent edit it rereads the latest README and preserves
+text outside the chart markers. Its `GITHUB_TOKEN` commit does not start another
+benchmark; generated README/chart paths are also excluded from push triggers.
 
 On Linux, available CPUs are split into disjoint server and client sets using
 `taskset`; every child, including Node cluster workers, inherits its set. The
@@ -145,6 +180,7 @@ haxelib install hxjava 4.2.0
 haxelib install hxnodejs 12.2.0
 haxelib install hxcpp 4.3.2
 
+python3 -m pip install -r requirements-charts.txt
 python3 -m unittest discover -s tests -v
 python3 -m bench fetch
 make -C dependencies/wrk -j2 WITH_OPENSSL=/usr VER=4.2.0
@@ -161,3 +197,17 @@ behavior only. Choose a fresh output directory for each measurement; the harness
 refuses to overwrite existing results or bundles. All traffic is loopback, and
 cleanup signals only the process groups created by the harness, never `pkill`
 or unrelated Java/Node/Neko processes.
+
+## Render charts locally
+
+```sh
+python3 -m pip install -r requirements-charts.txt
+python3 -m bench.charts --report out/local-run/results.json --output out/charts \
+  --repository hxwell/hxwell-benchmark --run-id 123 --run-number 1 \
+  --source-sha FULL_BENCHMARK_COMMIT_SHA --profile ci --cases all --preview
+```
+
+Use the actual run identifiers/source commit and the same profile/case selection
+as the report. `--preview` additionally creates PNGs for inspection. The publisher
+is restricted to trusted `main` GitHub Actions jobs; local rendering never writes
+to GitHub. Install the chart requirements before running the Python test suite.

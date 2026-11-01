@@ -1,0 +1,331 @@
+{
+  "schema_version": 1,
+  "run": {
+    "repository": "hxwell/hxwell-benchmark",
+    "id": 41268866888,
+    "number": 1,
+    "attempt": 1,
+    "source_sha": "e719ecc615d39754771532661036e842bca9f149",
+    "url": "https://github.com/hxwell/hxwell-benchmark/actions/runs/41268866888"
+  },
+  "outcome": "success",
+  "profile_name": "ci",
+  "profile": {
+    "warmup_seconds": 3,
+    "duration_seconds": 5,
+    "repetitions": 3,
+    "connections": [
+      32
+    ],
+    "performance_run": true
+  },
+  "cases": [
+    "jvm-socket",
+    "jvm-undertow",
+    "jvm-crossbyte",
+    "neko-socket",
+    "neko-crossbyte",
+    "js-nodehttp",
+    "cpp-socket"
+  ],
+  "workloads": [
+    "plaintext",
+    "json",
+    "echo"
+  ],
+  "expected_trials": 63,
+  "valid_trials": 63,
+  "finished_at": "2026-11-01T03:35:07.645266+00:00",
+  "rows": [
+    {
+      "case": "jvm-socket",
+      "workload": "plaintext",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 774.2833929210261,
+      "rps_min": 771.0703975287394,
+      "rps_max": 778.2429337080517,
+      "p99_ms_median": 44.984,
+      "peak_group_rss_mib": 148.359375,
+      "client_saturated": false
+    },
+    {
+      "case": "jvm-undertow",
+      "workload": "plaintext",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 9637.171673907198,
+      "rps_min": 9280.99477039493,
+      "rps_max": 17282.862489831732,
+      "p99_ms_median": 7.983,
+      "peak_group_rss_mib": 165.34375,
+      "client_saturated": false
+    },
+    {
+      "case": "jvm-crossbyte",
+      "workload": "plaintext",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 11035.578811640704,
+      "rps_min": 10625.423474535635,
+      "rps_max": 19136.156904095576,
+      "p99_ms_median": 7.12,
+      "peak_group_rss_mib": 155.140625,
+      "client_saturated": false
+    },
+    {
+      "case": "neko-socket",
+      "workload": "plaintext",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 1893.0122131884516,
+      "rps_min": 1888.5845114074903,
+      "rps_max": 1913.1570290573097,
+      "p99_ms_median": 22.625,
+      "peak_group_rss_mib": 10.85546875,
+      "client_saturated": false
+    },
+    {
+      "case": "neko-crossbyte",
+      "workload": "plaintext",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 1343.745646517944,
+      "rps_min": 1332.7958156810378,
+      "rps_max": 1403.2762310364226,
+      "p99_ms_median": 31.909,
+      "peak_group_rss_mib": 31.5859375,
+      "client_saturated": false
+    },
+    {
+      "case": "js-nodehttp",
+      "workload": "plaintext",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 9981.522806997902,
+      "rps_min": 9459.155464684385,
+      "rps_max": 10314.827697286952,
+      "p99_ms_median": 20.618,
+      "peak_group_rss_mib": 194.06640625,
+      "client_saturated": false
+    },
+    {
+      "case": "cpp-socket",
+      "workload": "plaintext",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 8388.389280918378,
+      "rps_min": 8326.50717545713,
+      "rps_max": 8423.37432394284,
+      "p99_ms_median": 5.766,
+      "peak_group_rss_mib": 59.27734375,
+      "client_saturated": false
+    },
+    {
+      "case": "jvm-socket",
+      "workload": "json",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 775.4157445159965,
+      "rps_min": 774.1719289497314,
+      "rps_max": 779.9955126282753,
+      "p99_ms_median": 44.007,
+      "peak_group_rss_mib": 148.09375,
+      "client_saturated": false
+    },
+    {
+      "case": "jvm-undertow",
+      "workload": "json",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 16808.636295842236,
+      "rps_min": 9481.217888486835,
+      "rps_max": 17516.169733554627,
+      "p99_ms_median": 4.281,
+      "peak_group_rss_mib": 170.2890625,
+      "client_saturated": false
+    },
+    {
+      "case": "jvm-crossbyte",
+      "workload": "json",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 18955.751455220703,
+      "rps_min": 10595.565626152267,
+      "rps_max": 19086.626025257818,
+      "p99_ms_median": 3.842,
+      "peak_group_rss_mib": 152.515625,
+      "client_saturated": false
+    },
+    {
+      "case": "neko-socket",
+      "workload": "json",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 1841.465221622709,
+      "rps_min": 1837.7688471207289,
+      "rps_max": 1845.5216407907071,
+      "p99_ms_median": 23.372,
+      "peak_group_rss_mib": 10.85546875,
+      "client_saturated": false
+    },
+    {
+      "case": "neko-crossbyte",
+      "workload": "json",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 1308.8071051657391,
+      "rps_min": 1307.3042877701064,
+      "rps_max": 1361.8747075269075,
+      "p99_ms_median": 31.647,
+      "peak_group_rss_mib": 32.75390625,
+      "client_saturated": false
+    },
+    {
+      "case": "js-nodehttp",
+      "workload": "json",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 9904.826142027474,
+      "rps_min": 9613.533475339931,
+      "rps_max": 10058.435233199994,
+      "p99_ms_median": 10.387,
+      "peak_group_rss_mib": 196.25390625,
+      "client_saturated": false
+    },
+    {
+      "case": "cpp-socket",
+      "workload": "json",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 8327.369787245869,
+      "rps_min": 8324.544492855252,
+      "rps_max": 8387.79125419159,
+      "p99_ms_median": 5.942,
+      "peak_group_rss_mib": 71.28125,
+      "client_saturated": false
+    },
+    {
+      "case": "jvm-socket",
+      "workload": "echo",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 777.2184793693001,
+      "rps_min": 775.6292919669708,
+      "rps_max": 777.241318939946,
+      "p99_ms_median": 43.996,
+      "peak_group_rss_mib": 145.9921875,
+      "client_saturated": false
+    },
+    {
+      "case": "jvm-undertow",
+      "workload": "echo",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 15131.128593326033,
+      "rps_min": 13999.882961489737,
+      "rps_max": 15157.51577316865,
+      "p99_ms_median": 5.491,
+      "peak_group_rss_mib": 169.6796875,
+      "client_saturated": false
+    },
+    {
+      "case": "jvm-crossbyte",
+      "workload": "echo",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 17813.74119949166,
+      "rps_min": 17695.463868703064,
+      "rps_max": 17923.98589079359,
+      "p99_ms_median": 4.235,
+      "peak_group_rss_mib": 152.66796875,
+      "client_saturated": false
+    },
+    {
+      "case": "neko-socket",
+      "workload": "echo",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 1401.9173528346553,
+      "rps_min": 1380.5465316567877,
+      "rps_max": 1426.1684925914803,
+      "p99_ms_median": 30.924,
+      "peak_group_rss_mib": 10.9765625,
+      "client_saturated": false
+    },
+    {
+      "case": "neko-crossbyte",
+      "workload": "echo",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 1085.4434790503208,
+      "rps_min": 1078.1237586423017,
+      "rps_max": 1123.972216174524,
+      "p99_ms_median": 37.359,
+      "peak_group_rss_mib": 31.93359375,
+      "client_saturated": false
+    },
+    {
+      "case": "js-nodehttp",
+      "workload": "echo",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 8871.11737410607,
+      "rps_min": 8816.097486162487,
+      "rps_max": 8902.864367444674,
+      "p99_ms_median": 7.205,
+      "peak_group_rss_mib": 183.609375,
+      "client_saturated": false
+    },
+    {
+      "case": "cpp-socket",
+      "workload": "echo",
+      "connections": 32,
+      "valid": true,
+      "samples": 3,
+      "rps_median": 6386.400571218682,
+      "rps_min": 6340.214514957491,
+      "rps_max": 6404.545566299869,
+      "p99_ms_median": 7.301,
+      "peak_group_rss_mib": 75.4140625,
+      "client_saturated": false
+    }
+  ],
+  "status": "complete",
+  "message": "All selected measurements passed.",
+  "hardware": {
+    "os": "Linux",
+    "arch": "x86_64",
+    "cpu_model": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "logical_cpus": 2
+  },
+  "affinity": {
+    "enabled": true,
+    "server": [
+      0
+    ],
+    "client": [
+      1
+    ]
+  }
+}
