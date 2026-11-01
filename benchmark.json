@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "haxe_version": "4.3.7",
+  "cases": [
+    {"id": "jvm-socket", "target": "jvm", "driver": "socket", "dispatch": "platform-thread pool"},
+    {"id": "jvm-undertow", "target": "jvm", "driver": "undertow", "dispatch": "XNIO worker pool"},
+    {"id": "jvm-crossbyte", "target": "jvm", "driver": "crossbyte", "dispatch": "virtual threads + I/O runtimes"},
+    {"id": "neko-socket", "target": "neko", "driver": "socket", "dispatch": "platform-thread pool"},
+    {"id": "neko-crossbyte", "target": "neko", "driver": "crossbyte", "dispatch": "worker pool + I/O runtimes"},
+    {"id": "js-nodehttp", "target": "js", "driver": "nodehttp", "dispatch": "Node cluster workers"},
+    {"id": "cpp-socket", "target": "cpp", "driver": "socket", "dispatch": "platform-thread pool"}
+  ],
+  "workloads": [
+    {"id": "plaintext", "path": "/plaintext", "method": "GET", "expected_text": "Hello, World!\n", "content_type": "text/plain"},
+    {"id": "json", "path": "/json", "method": "GET", "expected_json": {"message": "Hello, World!", "number": 42}, "content_type": "application/json"},
+    {"id": "echo", "path": "/echo", "method": "POST", "body": "{\"message\":\"benchmark\",\"number\":42}", "expected_json": {"message": "benchmark", "number": 42}, "content_type": "application/json"}
+  ],
+  "profiles": {
+    "smoke": {"warmup_seconds": 1, "duration_seconds": 1, "repetitions": 1, "connections": [4], "performance_run": false},
+    "ci": {"warmup_seconds": 3, "duration_seconds": 5, "repetitions": 3, "connections": [32], "performance_run": true},
+    "full": {"warmup_seconds": 5, "duration_seconds": 10, "repetitions": 3, "connections": [16, 128], "performance_run": true}
+  }
+}

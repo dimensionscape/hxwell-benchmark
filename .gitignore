@@ -1,0 +1,5 @@
+out/
+dependencies/
+.haxelib/
+__pycache__/
+node_modules/
