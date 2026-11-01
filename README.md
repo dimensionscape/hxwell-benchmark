@@ -3,30 +3,30 @@
 <!-- benchmark-charts:start -->
 ## Summary
 
-**Complete** · [Run #4 (attempt 1)](https://github.com/hxwell/hxwell-benchmark/actions/runs/41272793097) · profile `ci` · 63/63 valid trials.
-Source: [`e05b909`](https://github.com/hxwell/hxwell-benchmark/commit/e05b9095b88a83ccf6e49850e36c0d1528bab471). Finished: `2026-11-01T04:35:37.827256+00:00`.
+**Complete** · [Run #5 (attempt 1)](https://github.com/hxwell/hxwell-benchmark/actions/runs/41274494312) · profile `ci` · 72/72 valid trials.
+Source: [`b26dc9c`](https://github.com/hxwell/hxwell-benchmark/commit/b26dc9c496ae55c3f91db0acde89d6f5b43fe520). Finished: `2026-11-01T05:07:47.881863+00:00`.
 
 All selected measurements passed.
 
-![Summary: all targets, throughput, p99 latency and memory](docs/benchmarks/latest/summary.svg?run=41272793097-1)
+![Summary: all targets, throughput, p99 latency and memory](docs/benchmarks/latest/summary.svg?run=41274494312-1)
 
 Each chart shows throughput, p99 latency and peak RSS for plaintext, JSON and echo. Summary and target charts use matching scales and colors; workloads and connection levels remain separate.
 
 ## JVM
 
-![JVM benchmark results](docs/benchmarks/latest/target-jvm.svg?run=41272793097-1)
+![JVM benchmark results](docs/benchmarks/latest/target-jvm.svg?run=41274494312-1)
 
 ## Neko
 
-![Neko benchmark results](docs/benchmarks/latest/target-neko.svg?run=41272793097-1)
+![Neko benchmark results](docs/benchmarks/latest/target-neko.svg?run=41274494312-1)
 
 ## JavaScript / Node
 
-![JavaScript / Node benchmark results](docs/benchmarks/latest/target-js.svg?run=41272793097-1)
+![JavaScript / Node benchmark results](docs/benchmarks/latest/target-js.svg?run=41274494312-1)
 
 ## C++ / hxcpp
 
-![C++ / hxcpp benchmark results](docs/benchmarks/latest/target-cpp.svg?run=41272793097-1)
+![C++ / hxcpp benchmark results](docs/benchmarks/latest/target-cpp.svg?run=41274494312-1)
 
 [Chart data and provenance](docs/benchmarks/latest/manifest.json) · Full raw results are in the linked run's `benchmark-results` artifact.
 Only the selected targets, cases and connection levels from this run are shown; older runs are not mixed into these charts.
