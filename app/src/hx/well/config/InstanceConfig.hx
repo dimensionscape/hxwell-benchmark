@@ -16,7 +16,9 @@ class InstanceConfig implements IConfig {
         #if jvm
         builder.setMaxConnections(10000).setMaxConcurrentRequests(2000).setPoolSize(16);
         #else
-        builder.setMaxConnections(Settings.connections).setMaxConcurrentRequests(Settings.connections).setPoolSize(Settings.workers);
+        // A worker waits for the I/O runtime to write each part of its
+        // response, so one per CPU leaves the CPUs partly idle.
+        builder.setMaxConnections(Settings.connections).setMaxConcurrentRequests(Settings.connections).setPoolSize(Settings.workers * 8);
         #end
         return [builder.configureHttp(http -> {
                 #if jvm
