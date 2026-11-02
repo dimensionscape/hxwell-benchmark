@@ -3,30 +3,30 @@
 <!-- benchmark-charts:start -->
 ## Summary
 
-**Complete** · [Run #15 (attempt 1)](https://github.com/hxwell/hxwell-benchmark/actions/runs/41363561051) · profile `stress` · 81/81 valid trials.
-Source: [`a464379`](https://github.com/hxwell/hxwell-benchmark/commit/a464379d2b96ec504816343a529039b6c042cd3c). Finished: `2026-11-02T00:12:33.711334+00:00`.
+**Complete** · [Run #17 (attempt 1)](https://github.com/hxwell/hxwell-benchmark/actions/runs/41389396916) · profile `stress` · 90/90 valid trials.
+Source: [`fe7769e`](https://github.com/hxwell/hxwell-benchmark/commit/fe7769e0c63a9c57589c01ade53902ddd6db118d). Finished: `2026-11-02T05:06:48.578213+00:00`.
 
 All selected measurements passed.
 
-![Summary: all targets, throughput, p99 latency and memory](docs/benchmarks/latest/summary.svg?run=41363561051-1&layout=4)
+![Summary: all targets, throughput, p99 latency and memory](docs/benchmarks/latest/summary.svg?run=41389396916-1&layout=4)
 
 Each chart shows throughput, p99 latency and peak RSS for plaintext, JSON and echo. Case colors are consistent across views; each target uses its own axis scales for detail. Workloads and connection levels remain separate.
 
 ## JVM
 
-![JVM benchmark results](docs/benchmarks/latest/target-jvm.svg?run=41363561051-1&layout=4)
+![JVM benchmark results](docs/benchmarks/latest/target-jvm.svg?run=41389396916-1&layout=4)
 
 ## HashLink / HL-JIT
 
-![HashLink / HL-JIT benchmark results](docs/benchmarks/latest/target-hl.svg?run=41363561051-1&layout=4)
+![HashLink / HL-JIT benchmark results](docs/benchmarks/latest/target-hl.svg?run=41389396916-1&layout=4)
 
 ## JavaScript / Node
 
-![JavaScript / Node benchmark results](docs/benchmarks/latest/target-js.svg?run=41363561051-1&layout=4)
+![JavaScript / Node benchmark results](docs/benchmarks/latest/target-js.svg?run=41389396916-1&layout=4)
 
 ## C++ / libhxcpp
 
-![C++ / libhxcpp benchmark results](docs/benchmarks/latest/target-cpp.svg?run=41363561051-1&layout=4)
+![C++ / libhxcpp benchmark results](docs/benchmarks/latest/target-cpp.svg?run=41389396916-1&layout=4)
 
 [Chart data and provenance](docs/benchmarks/latest/manifest.json) · Full raw results are in the linked run's `benchmark-results` artifact.
 Only the selected targets, cases and connection levels from this run are shown; older runs are not mixed into these charts.
