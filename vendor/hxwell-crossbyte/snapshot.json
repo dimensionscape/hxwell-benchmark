@@ -1,23 +1,24 @@
 {
-  "repository": "https://github.com/hxwell/hxwell-crossbyte.git",
-  "revision": "c08ad429c92947e9ced4138207a7c8e52e3e9e44",
+  "repository": "https://github.com/dimensionscape/hxwell-crossbyte.git",
+  "revision": "e3ae51d53124548484acd79c7dd760776148699c",
   "files": {
     "LICENSE": "e83404c7b618ea088f45c2e048105e40e371317ecc2e2b723e724f81a9424310",
     "extraParams.hxml": "37f86bc21cf05d4862642e3882b7d5e6d0a418c4b4418a9ec1dc73df7cde78b5",
     "haxelib.json": "5dcab5a506e7b5240cee8a8c91aa6923faef8b43ab281ffc71e8faf1361dc072",
-    "src/hx/well/http/driver/crossbyte/CrossbyteDriver.hx": "c6d9efb4f874ab5db2a5ef8e415b8c4b2da2f5bd3c54a1ba268fea783b201ba8",
+    "src/hx/well/http/driver/crossbyte/CrossbyteDriver.hx": "a93db170e68a0588122a37895de85296d1b765311036e351841a0d9d4fa082df",
     "src/hx/well/http/driver/crossbyte/CrossbyteDriverConfig.hx": "ef8f23c2b5d5ba20fbf54ae11e59ad7b344d26f09279d20bcc25ed5d3633e918",
-    "src/hx/well/http/driver/crossbyte/CrossbyteDriverContext.hx": "0bdf4595e955d9fb00ffc6a713e9792065b8474c396a5f3a1809bae9accb6b16",
+    "src/hx/well/http/driver/crossbyte/CrossbyteDriverContext.hx": "ff25f30176167f405811b48985f5c82f2837bd0f089f2d2d238090a9e753849d",
     "src/hx/well/http/driver/crossbyte/CrossbyteInstance.hx": "6641a3383b89ee6e2f06bf693a0aa55c49d532dd08b5a2f337309147d7519bcf",
     "src/hx/well/http/driver/crossbyte/CrossbyteInstanceBuilder.hx": "f13b16263b4db90bb7548a7e80bb722e0661d1554c936b7837de6b5f4f5106c3",
     "src/hx/well/http/driver/crossbyte/internal/DeflateWriter.hx": "c85f6f84c322b96a13c5281b871fe25cd1e8e613f421e75eccaf7480868b9c20",
     "src/hx/well/http/driver/crossbyte/internal/RequestValidation.hx": "8f14d0ba110d0cefaa73bed4433cef801fcf164224fa9951b454caa8ff15ecb8",
-    "src/hx/well/http/driver/crossbyte/internal/ResponseBridge.hx": "e658d8919c8270207e0825c5a8c223fe8467d81eba4dc8fe6d633d650ff663ed",
+    "src/hx/well/http/driver/crossbyte/internal/ResponseBridge.hx": "94476999d78e049f3f387c96007d03ce4ffbe0069b489389ff431bfe1732e391",
     "src/hx/well/http/driver/crossbyte/internal/ResponseHead.hx": "f0af36847b157518db8e52c7f22f180e25f1ee5e91d9be04151e08812fbcca74",
     "src/hx/well/http/driver/crossbyte/internal/RuntimeHost.hx": "b7cf28479d4f6e55bbab48c4908a43e561e5fb60ed554461e386fe9dbffb3c38",
-    "src/hx/well/http/driver/crossbyte/internal/UpstreamAccess.hx": "33bc8f9501aa71da5142bb9f94260430b178af72645f022ed640fe1da2e959d0",
+    "src/hx/well/http/driver/crossbyte/internal/UpstreamAccess.hx": "f02aebb29156519ff54b16a67443c1fffb5aefb099143e3d2c00aa1227567881",
     "src/hx/well/http/driver/crossbyte/internal/UpstreamWebSocket.hx": "77412ca084ffd571fc5de85acc9338db2ba1179801f6643e1485e649a49fa7fe",
     "src/hx/well/http/driver/crossbyte/internal/WebSocketBridge.hx": "97679360cc54c81e87070f8da20270a647a45860e669e37e12ae4b2e5d8e3a2b",
+    "src/hx/well/http/driver/crossbyte/internal/WorkerPool.hx": "fd8c7911c2971cd24ed0bc70b219fc77fd45b3498786a06a03c14c928da46fe6",
     "src/hx/well/http/driver/crossbyte/macro/Compatibility.hx": "4c8e397edd2efaa4f8d1905be7e5c81939d03c85aae57a52ba2ebe422472264d"
   }
 }

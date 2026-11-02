@@ -5,8 +5,8 @@
       "revision": "7944b82b589646baf67dba5f2a1954b9f040b30e"
     },
     "hxwell-crossbyte": {
-      "url": "https://github.com/hxwell/hxwell-crossbyte.git",
-      "revision": "c08ad429c92947e9ced4138207a7c8e52e3e9e44",
+      "url": "https://github.com/dimensionscape/hxwell-crossbyte.git",
+      "revision": "e3ae51d53124548484acd79c7dd760776148699c",
       "vendored": true
     },
     "crossbyte": {
