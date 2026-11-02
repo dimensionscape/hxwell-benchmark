@@ -1,0 +1,165 @@
+{
+  "run_url": "https://github.com/hxwell/hxwell-benchmark/actions/runs/41388256606",
+  "benchmark_commit": "5333bc05d5b7ac92ff5afaff4efaa9c60b62f389",
+  "profile": {
+    "warmup_seconds": 5,
+    "duration_seconds": 10,
+    "repetitions": 3,
+    "connections": [
+      1000
+    ],
+    "request_timeout_seconds": 10,
+    "performance_run": true
+  },
+  "hardware": {
+    "os": "Linux",
+    "release": "7.0.0-1017-azure",
+    "arch": "x86_64",
+    "logical_cpus": 4,
+    "cpu_model": "AMD EPYC 9V45 96-Core Processor",
+    "memory": "MemTotal:       16367524 kB",
+    "cpuset.cpus.effective": "0-3"
+  },
+  "affinity": {
+    "enabled": true,
+    "server": [
+      0,
+      1
+    ],
+    "client": [
+      2,
+      3
+    ]
+  },
+  "settings": {
+    "server_workers": 2,
+    "client_threads": 2,
+    "protocol": "HTTP/1.1",
+    "middleware": "none",
+    "compression": "identity",
+    "request_timeout_seconds": 10,
+    "file_descriptor_limits": {
+      "soft_before": 65536,
+      "soft_after": 65536,
+      "hard": 65536,
+      "required": 2256
+    }
+  },
+  "java": "openjdk version \"21.0.13\" 2026-10-20 LTS",
+  "valid_trials": 18,
+  "sources": {
+    "jvm-crossbyte": {
+      "url": "https://github.com/DimensionscapeOrg/crossbyte.git",
+      "revision": "acc6de8994e0292ae48706017a2eafa4acbaedbf"
+    },
+    "jvm-crossbyte-virtual": {
+      "url": "https://github.com/hxwell/crossbyte.git",
+      "revision": "82a68cbc1c90fe1a65130431b775de56ecfad2de"
+    }
+  },
+  "current_fork_commit": "183eee1e0229bb0b727b45d0a5ce24a18054e2a2",
+  "fork_runtime_source_tree": "10a97d07510a0e8f1b0bd1ed9b5b493908c3b9bc",
+  "current_fork_runtime_tree_identical": true,
+  "request_threads": "virtual in both cases",
+  "io_threads": {
+    "jvm-crossbyte": "platform",
+    "jvm-crossbyte-virtual": "virtual"
+  },
+  "results": [
+    {
+      "workload": "plaintext",
+      "jvm-crossbyte": {
+        "rps": 23431.249946423664,
+        "rps_min": 22939.797935326464,
+        "rps_max": 24862.09936025271,
+        "samples": [
+          23431.249946423664,
+          22939.797935326464,
+          24862.09936025271
+        ],
+        "p99_ms": 91.081,
+        "peak_rss_mib": 359.7890625,
+        "client_saturated": false
+      },
+      "jvm-crossbyte-virtual": {
+        "rps": 27507.111510559007,
+        "rps_min": 27197.107260555444,
+        "rps_max": 29548.41719445475,
+        "samples": [
+          27507.111510559007,
+          27197.107260555444,
+          29548.41719445475
+        ],
+        "p99_ms": 85.953,
+        "peak_rss_mib": 359.4765625,
+        "client_saturated": false
+      },
+      "throughput_change_percent": 17.394981375107754,
+      "p99_change_percent": -5.630153379958502
+    },
+    {
+      "workload": "json",
+      "jvm-crossbyte": {
+        "rps": 24746.582017231864,
+        "rps_min": 22888.370563081247,
+        "rps_max": 24994.64258838234,
+        "samples": [
+          24746.582017231864,
+          24994.64258838234,
+          22888.370563081247
+        ],
+        "p99_ms": 59.972,
+        "peak_rss_mib": 356.76171875,
+        "client_saturated": false
+      },
+      "jvm-crossbyte-virtual": {
+        "rps": 28909.44709016127,
+        "rps_min": 26580.09339121503,
+        "rps_max": 29177.78151346973,
+        "samples": [
+          29177.78151346973,
+          28909.44709016127,
+          26580.09339121503
+        ],
+        "p99_ms": 56.51,
+        "peak_rss_mib": 358.96484375,
+        "client_saturated": false
+      },
+      "throughput_change_percent": 16.82197998103603,
+      "p99_change_percent": -5.772693923831129
+    },
+    {
+      "workload": "echo",
+      "jvm-crossbyte": {
+        "rps": 22818.466471060907,
+        "rps_min": 22761.411998253017,
+        "rps_max": 23307.017998651994,
+        "samples": [
+          22761.411998253017,
+          23307.017998651994,
+          22818.466471060907
+        ],
+        "p99_ms": 67.819,
+        "peak_rss_mib": 360.88671875,
+        "client_saturated": false
+      },
+      "jvm-crossbyte-virtual": {
+        "rps": 27834.992502239867,
+        "rps_min": 27823.10511294335,
+        "rps_max": 28466.504518992686,
+        "samples": [
+          28466.504518992686,
+          27823.10511294335,
+          27834.992502239867
+        ],
+        "p99_ms": 53.862,
+        "peak_rss_mib": 361.21484375,
+        "client_saturated": false
+      },
+      "throughput_change_percent": 21.984501182588566,
+      "p99_change_percent": -20.57977852814108
+    }
+  ],
+  "run_number": 16,
+  "attempt": 1
+}

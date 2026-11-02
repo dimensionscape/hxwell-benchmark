@@ -21,7 +21,7 @@ def main():
     matrix.add_argument("--github-output", type=Path)
     download = sub.add_parser("fetch")
     download.add_argument("--deps", type=Path, default=Path("dependencies"))
-    download.add_argument("--names", default="hxwell,hxwell-crossbyte,crossbyte,emitter,libhxcpp,crossbyte-libuv,libuv,hashlink,wrk,maven")
+    download.add_argument("--names", default="hxwell,hxwell-crossbyte,crossbyte,crossbyte-jvm-virtual,emitter,libhxcpp,crossbyte-libuv,libuv,hashlink,wrk,maven")
     compile = sub.add_parser("build")
     compile.add_argument("--case", required=True)
     compile.add_argument("--deps", type=Path, default=Path("dependencies"))

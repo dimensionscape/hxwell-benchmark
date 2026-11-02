@@ -15,7 +15,7 @@ import subprocess
 import time
 import uuid
 
-from .config import ROOT
+from .config import ROOT, crossbyte_repository_name, load_config
 from .dependencies import sha256
 from .metrics import ProcessMeter
 from .hashlink import verify_runtime
@@ -145,6 +145,10 @@ def verify_bundle(bundle, case):
         raise ValueError("Build OS/architecture does not match measurement host")
     if metadata["workloads_sha256"] != sha256(ROOT / "benchmark.json"):
         raise ValueError("Benchmark configuration changed after building")
+    if case["driver"] == "crossbyte":
+        _, lock = load_config()
+        if metadata.get("crossbyte_repository") != lock["repositories"][crossbyte_repository_name(case)]:
+            raise ValueError("Crossbyte source provenance does not match the requested implementation")
     for name, expected in metadata["files"].items():
         path = (bundle / name).resolve()
         if not path.is_relative_to(bundle.resolve()) or sha256(path) != expected:
@@ -160,6 +164,10 @@ def validate_health(health, case, workers, token, metadata):
     expected_virtual = case["target"] == "jvm" and case["driver"] == "crossbyte"
     if health.get("virtual_thread") is not expected_virtual:
         raise RuntimeError("Unexpected request thread dispatch mode")
+    if case["target"] == "jvm" and case["driver"] == "crossbyte":
+        expected_io_virtual = case.get("io_threads", "platform") == "virtual"
+        if health.get("io_virtual_thread") is not expected_io_virtual:
+            raise RuntimeError("Crossbyte request I/O runtime has the wrong actual JVM thread type")
     if case["target"] == "hl" and health.get("hashlink_mode") != "jit":
         raise RuntimeError("HashLink benchmark did not use the expected JIT mode")
     if case["target"] == "cpp":

@@ -98,9 +98,12 @@ jobs:
           DRIVER: ${{ matrix.driver }}
           TARGET: ${{ matrix.target }}
           POLL_BACKEND: ${{ matrix.poll_backend || 'default' }}
+          CROSSBYTE_VARIANT: ${{ matrix.crossbyte_variant || 'upstream' }}
         run: |
+          CROSSBYTE_SOURCE=crossbyte
+          if [ "$CROSSBYTE_VARIANT" = jvm-virtual ]; then CROSSBYTE_SOURCE=crossbyte-jvm-virtual; fi
           case "$DRIVER" in
-            crossbyte) NAMES=hxwell,hxwell-crossbyte,crossbyte,emitter ;;
+            crossbyte) NAMES="hxwell,hxwell-crossbyte,$CROSSBYTE_SOURCE,emitter" ;;
             undertow) NAMES=hxwell,maven ;;
             *) NAMES=hxwell ;;
           esac

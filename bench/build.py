@@ -8,7 +8,7 @@ import tarfile
 import tempfile
 import time
 
-from .config import ROOT
+from .config import ROOT, crossbyte_repository_name
 from .dependencies import capture, command, local_haxelib, sha256, verify_repository
 
 
@@ -47,6 +47,8 @@ def build(config, lock, case, deps, output, haxe="haxe"):
     args = [haxe, "-lib", "hxwell-crossbyte" if case["driver"] == "crossbyte" else "hxwell",
             "-cp", str(ROOT / "app/src"), "-D", "disable_env", "-D", "disable_cli", "-D", "analyzer-optimize",
             "-D", f"bench_case={case['id']}", "-D", f"bench_driver={case['driver']}", "-D", f"bench_{case['driver']}"]
+    if case.get("crossbyte_variant") == "jvm-virtual":
+        args += ["-D", "crossbyte_jvm_virtual_threads"]
     jars = []
     if case["driver"] == "undertow":
         for artifact in lock["maven"]:
@@ -104,7 +106,8 @@ def build(config, lock, case, deps, output, haxe="haxe"):
     metadata = {"schema_version": 1, "case": case, "command": launch, "haxe_version": config["haxe_version"],
                 "build_seconds": time.monotonic() - started, "build_os": platform.system(), "build_arch": platform.machine(),
                 "repositories": lock["repositories"], "libraries": libraries, "native_libraries": native_libraries, "files": files,
-                "build_command": args, "workloads_sha256": sha256(ROOT / "benchmark.json")}
+                "build_command": args, "workloads_sha256": sha256(ROOT / "benchmark.json"),
+                "crossbyte_repository": lock["repositories"][crossbyte_repository_name(case)] if case["driver"] == "crossbyte" else None}
     (destination / "build.json").write_text(json.dumps(metadata, indent=2) + "\n")
     shutil.copy2(work / "build.log", destination / "build.log")
     with tarfile.open(output / f"{case['id']}.tar.gz", "w:gz") as archive:

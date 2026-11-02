@@ -13,6 +13,10 @@
       "url": "https://github.com/DimensionscapeOrg/crossbyte.git",
       "revision": "acc6de8994e0292ae48706017a2eafa4acbaedbf"
     },
+    "crossbyte-jvm-virtual": {
+      "url": "https://github.com/hxwell/crossbyte.git",
+      "revision": "183eee1e0229bb0b727b45d0a5ce24a18054e2a2"
+    },
     "emitter": {
       "url": "https://github.com/Dimensionscape/Emitter.git",
       "revision": "06b396f584271e24a7dc18dcfadfd020c567cc6a"

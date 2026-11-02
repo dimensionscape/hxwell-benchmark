@@ -14,6 +14,15 @@ def load_config():
     for case in config["cases"]:
         if case["target"] not in ("jvm", "hl", "js", "cpp"):
             raise ValueError(f"Unsupported benchmark target: {case['target']}")
+        if "crossbyte_variant" in case and (case["target"] != "jvm" or case["driver"] != "crossbyte"
+                                             or case["crossbyte_variant"] != "jvm-virtual"):
+            raise ValueError("The virtual runtime fork requires a JVM Crossbyte case")
+        if case.get("crossbyte_variant") == "jvm-virtual" and case.get("io_threads") != "virtual":
+            raise ValueError("The virtual runtime fork must declare virtual I/O threads")
+        if "io_threads" in case:
+            expected = "virtual" if case.get("crossbyte_variant") == "jvm-virtual" else "platform"
+            if case["target"] != "jvm" or case["driver"] != "crossbyte" or case["io_threads"] != expected:
+                raise ValueError("I/O thread mode does not match the selected Crossbyte implementation")
         if "poll_backend" in case and (case["target"] != "cpp" or case["driver"] != "crossbyte"
                                        or case["poll_backend"] not in ("builtin", "libuv")):
             raise ValueError("Explicit poll backends require a C++ Crossbyte case")
@@ -29,3 +38,7 @@ def select_cases(config, selection="all"):
     if not names or any(name not in allowed for name in names) or len(names) != len(set(names)):
         raise ValueError(f"Choose unique cases from: {', '.join(allowed)}")
     return [allowed[name] for name in names]
+
+
+def crossbyte_repository_name(case):
+    return "crossbyte-jvm-virtual" if case.get("crossbyte_variant") == "jvm-virtual" else "crossbyte"

@@ -44,7 +44,8 @@ set of claimed performance numbers.
 | --- | --- | --- | --- |
 | `jvm-socket` | JVM | HxWell Socket | Platform-thread pool |
 | `jvm-undertow` | JVM | Undertow | XNIO worker pool |
-| `jvm-crossbyte` | JVM | Crossbyte | Virtual threads, single I/O runtime |
+| `jvm-crossbyte` | JVM | Upstream Crossbyte | Virtual requests, platform I/O runtime |
+| `jvm-crossbyte-virtual` | JVM | HxWell Crossbyte fork | Virtual requests and virtual I/O runtime |
 | `hl-socket` | HashLink / HL-JIT | HxWell Socket | Platform-thread pool |
 | `hl-crossbyte` | HashLink / HL-JIT | Crossbyte | Worker pool, separate I/O runtimes |
 | `js-nodehttp` | JavaScript/Node | NodeHTTP | Cluster workers |
@@ -115,12 +116,19 @@ default per-address rate limiter. Crossbyte's keep-alive request-count cap is
 disabled for this load test. All cases request HTTP/1.1 keep-alive and identity
 encoding; this is not an HTTP/2, TLS, WebSocket or full middleware benchmark.
 
-JVM Crossbyte uses `maxConnections=10000`, `maxConcurrentRequests=2000`,
+Both JVM Crossbyte cases use `maxConnections=10000`, `maxConcurrentRequests=2000`,
 `poolSize=16` and `runtimeCount=0`, with per-address rate limiting disabled.
 Connections stay on the listener's I/O runtime, avoiding the bounded connection
 handoff queue under connection bursts; HxWell requests still run on virtual
 threads. The JVM driver does not use the configured pool size to execute
-requests. Other Crossbyte targets retain the configured worker pool and separate
+requests. The fork case uses the same base Crossbyte commit and adds
+`-D crossbyte_jvm_virtual_threads`, changing child runtime owners to Java 21
+virtual threads. The upstream case keeps platform I/O threads. `/health` posts a
+probe to the request socket's actual runtime and checks its Java thread type;
+both cases must also report a virtual HTTP application handler. The fork source
+and commit are recorded separately in each build, so a mislabeled source or a
+fallback thread type fails validation. See the [fork documentation](https://github.com/hxwell/crossbyte/blob/jvm-virtual-threads/JVM_VIRTUAL_THREADS.md).
+Other Crossbyte targets retain the configured worker pool and separate
 I/O runtimes.
 
 The JVM heap is fixed at 256 MiB; Node's old-space limit is 256 MiB per process.
@@ -135,6 +143,28 @@ Response correctness is checked outside the measured interval. `wrk` reports
 HTTP status errors for responses above 399; redirects are rejected by the
 preflights but are not individually inspected during load. See the upstream
 [wrk scripting API](https://github.com/wg/wrk/blob/4.2.0/SCRIPTING).
+
+## Focused JVM virtual-runtime comparison
+
+[Run #16](https://github.com/hxwell/hxwell-benchmark/actions/runs/41388256606)
+compared the two Crossbyte cases on one AMD EPYC runner with two server CPUs
+and two separate client CPUs: Java 21, 1,000 connections, 5 s warmup, 10 s
+measurement and three repetitions. All 18 trials had zero client errors; neither
+client was saturated. Both application handlers were virtual; the I/O owner was
+confirmed platform for upstream and virtual for the fork.
+
+| Workload | Upstream req/s | Fork req/s | Throughput change | Upstream p99 | Fork p99 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Plaintext | 23,431 | 27,507 | +17.4% | 91.08 ms | 85.95 ms |
+| JSON | 24,747 | 28,909 | +16.8% | 59.97 ms | 56.51 ms |
+| Echo | 22,818 | 27,835 | +22.0% | 67.82 ms | 53.86 ms |
+
+Throughput and p99 are medians of three trials. Peak process-group RSS stayed
+about 357–361 MiB for both implementations. These numbers describe this paired
+run; the current all-target charts above are regenerated independently.
+[Samples, settings and source provenance](docs/benchmarks/comparisons/jvm-virtual-runtime-41388256606.json)
+record the measured fork commit and show that its runtime sources are identical
+to the subsequently pinned fork commit, which only corrects a JVM test assertion.
 
 ## Profiles
 
@@ -153,7 +183,7 @@ do not run on a recurring schedule. In manual dispatch, choose a profile and
 `stress` maintains **1,000 concurrent HTTP/1.1 connections** for every selected
 case and workload. Throughput is measured independently in requests/second.
 The longer request timeout allows queueing under this load; errors/timeouts still
-invalidate a trial. Running all nine cases produces 81 trials and about 20 minutes
+invalidate a trial. Running all ten cases produces 90 trials and about 23 minutes
 of warmup/load, plus startup and reporting. The README and charts are updated by
 the selected profile's completed main-branch run.
 

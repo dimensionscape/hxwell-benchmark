@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import urllib.request
 
-from .config import ROOT
+from .config import ROOT, crossbyte_repository_name
 
 
 def command(args, **kwargs):
@@ -103,12 +103,14 @@ def local_haxelib(work, deps, lock, case):
     if case.get("poll_backend") == "libuv":
         repositories += ["crossbyte-libuv"]
     for name in repositories:
-        if lock["repositories"][name].get("vendored"):
+        source_name = crossbyte_repository_name(case) if name == "crossbyte" else name
+        spec = lock["repositories"][source_name]
+        if spec.get("vendored"):
             from .vendor import verify_snapshot
-            libraries[name] = verify_snapshot(lock["repositories"][name])
+            libraries[name] = verify_snapshot(spec)
             continue
-        path = deps / name
-        verify_repository(path, lock["repositories"][name])
+        path = deps / source_name
+        verify_repository(path, spec)
         if name == "libhxcpp":
             # Bootstrapping replaces the tracked run.n. Keep the immutable
             # checkout pristine and isolate compiler output between builds.
