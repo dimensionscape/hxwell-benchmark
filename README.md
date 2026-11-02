@@ -166,6 +166,15 @@ run; the current all-target charts above are regenerated independently.
 record the measured fork commit and show that its runtime sources are identical
 to the subsequently pinned fork commit, which only corrects a JVM test assertion.
 
+The subsequent [all-target run #17](https://github.com/hxwell/hxwell-benchmark/actions/runs/41389396916)
+passed all 90 trials. On its AMD EPYC 7763 host, the fork increased throughput by
+31.3% / 41.5% / 30.0% for plaintext / JSON / echo. JSON p99 increased from
+132.89 ms to 262.74 ms; peak RSS increased by 4–18 MiB across the three workloads.
+The fork therefore did not improve every latency or memory metric.
+[Repeated-run samples and provenance](docs/benchmarks/comparisons/jvm-virtual-runtime-41389396916.json)
+retain this result separately. The two runs used different hosted CPU models;
+compare implementations within each run rather than absolute RPS between runs.
+
 ## Profiles
 
 | Profile | Warmup per trial | Measurement | Repetitions | Connections | Request timeout | Use |
