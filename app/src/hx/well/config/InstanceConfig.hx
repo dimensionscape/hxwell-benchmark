@@ -15,10 +15,12 @@ class InstanceConfig implements IConfig {
             .setHost("127.0.0.1").setPort(Settings.port);
         #if jvm
         builder.setMaxConnections(10000).setMaxConcurrentRequests(2000).setPoolSize(16);
-        #else
+        #elseif cpp
         // A worker waits for the I/O runtime to write each part of its
         // response, so one per CPU leaves the CPUs partly idle.
         builder.setMaxConnections(Settings.connections).setMaxConcurrentRequests(Settings.connections).setPoolSize(Settings.workers * 8);
+        #else
+        builder.setMaxConnections(Settings.connections).setMaxConcurrentRequests(Settings.connections).setPoolSize(Settings.workers);
         #end
         return [builder.configureHttp(http -> {
                 #if jvm

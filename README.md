@@ -128,10 +128,13 @@ probe to the request socket's actual runtime and checks its Java thread type;
 both cases must also report a virtual HTTP application handler. The fork source
 and commit are recorded separately in each build, so a mislabeled source or a
 fallback thread type fails validation. See the [fork documentation](https://github.com/hxwell/crossbyte/blob/jvm-virtual-threads/JVM_VIRTUAL_THREADS.md).
-Other Crossbyte targets keep separate I/O runtimes and run requests on a pool
-of eight workers per server CPU (16 with two server CPUs). A worker waits for
-the connection's I/O runtime to write each part of its response, so a pool the
-size of the CPU set leaves those CPUs partly idle.
+Other Crossbyte targets keep separate I/O runtimes. The C++ cases run requests
+on a pool of eight workers per server CPU (16 with two server CPUs): a worker
+waits for the connection's I/O runtime to write each part of its response, so a
+pool the size of the CPU set leaves those CPUs partly idle. HashLink keeps one
+worker per server CPU; a larger pool was faster there, but most of its stress
+trials then had client read errors (connections closed by the server) and were
+invalid.
 
 The JVM heap is fixed at 256 MiB; Node's old-space limit is 256 MiB per process.
 These are runtime settings, not equivalent total-memory limits. Socket pool,
